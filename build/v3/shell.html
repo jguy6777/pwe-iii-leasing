@@ -62,8 +62,7 @@ button,select,input{font:inherit;color:inherit}
 .brand{display:flex;align-items:center;gap:18px;flex-wrap:wrap;min-width:0}
 .logo{height:62px;width:auto;max-width:100%;border-radius:10px;background:#fff;padding:4px 8px;border:1px solid var(--border-soft)}
 .upd{font:500 10.5px var(--f-m);letter-spacing:.02em;color:var(--text-mid);margin-bottom:4px}
-.homelink{display:inline-block;font:600 12px var(--f-b);color:var(--wave);text-decoration:none;margin-bottom:6px}
-.homelink:hover{text-decoration:underline}
+a.nav{text-decoration:none}
 .head h1{margin:0;font:600 22px/1.2 var(--f-d);letter-spacing:-.01em;color:var(--pine-ink)}
 .head .sub{font-size:13px;color:var(--text-mid);margin-top:3px}
 .hside{display:grid;justify-items:end;gap:8px}
@@ -343,7 +342,7 @@ td.r{font-family:var(--f-m);font-size:12px}
 
 <div class="frame">
   <nav class="rail" role="tablist" aria-label="Views" aria-orientation="vertical">
-    <button class="nav" role="tab" id="tab-ov" aria-controls="pane-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Overview</button>
+%%HOMENAV%%    <button class="nav" role="tab" id="tab-ov" aria-controls="pane-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="9" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="5" rx="1.5"/><rect x="13.5" y="11.5" width="7" height="9" rx="1.5"/><rect x="3.5" y="15.5" width="7" height="5" rx="1.5"/></svg>Overview</button>
     <button class="nav" role="tab" id="tab-un" aria-controls="pane-un"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg>Units &amp; plats</button>
     <button class="nav" role="tab" id="tab-ll" aria-controls="pane-ll"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Records<small id="llct"></small></button>
     <hr>
@@ -354,7 +353,7 @@ td.r{font-family:var(--f-m);font-size:12px}
     <header class="head">
       <div class="brand">
         <img class="logo" src="/*__LOGO__*/" alt="Pine Wave Energy Partners">
-        <div>%%HOME%%<div class="upd">Last updated from the Mapper export · %%DATE_S%%</div><h1>%%CODE%% Leasing Dashboard</h1><div class="sub">%%REGION%%</div></div>
+        <div><div class="upd">Last updated from the Mapper export · %%DATE_S%%</div><h1>%%CODE%% Leasing Dashboard</h1><div class="sub">%%REGION%%</div></div>
       </div>
       <div class="hside"><img class="seglogo" src="/*__SEGLOGO__*/" alt="Schoeffler Energy Group" title="Prepared by Schoeffler Energy Group"><div class="datepill">%%DATE_L%%</div></div>
     </header>

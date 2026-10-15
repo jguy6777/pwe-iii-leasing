@@ -61,7 +61,10 @@ for k in ['prep', 'board', 'goal', 'notes', 'rest']:
 t = t.replace('/*__PLATS__*/', open(P['plats']).read())
 for k in ['CODE', 'REGION', 'DATE_S', 'DATE_L', 'ACRESRC']:
     t = t.replace(f'%%{k}%%', P[k])
-t = t.replace('%%HOME%%', '<a class="homelink" href="../">← PWE Dashboard</a>' if home else '')
+# Home button at the top of the left rail, back to the PWE Dashboard landing page (deployed site only)
+HOMENAV = ('    <a class="nav" href="../" title="Back to the PWE Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+           '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v11h5v-6h4v6h5V9"/></svg>Home</a><hr>\n')
+t = t.replace('%%HOMENAV%%', HOMENAV if home else '')
 for a, b in P['words']:
     n = t.count(a)
     assert n >= 1, f'{key}: wording not found: {a!r}'
