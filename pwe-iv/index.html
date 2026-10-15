@@ -983,7 +983,10 @@ td.r{font-family:var(--f-m);font-size:12px}
 .count{font-size:12.5px;color:var(--text-mid)}
 .count b{color:var(--text-hi)}
 #ll{max-height:calc(100vh - 260px);min-height:420px}
-#ll th{cursor:pointer;user-select:none}
+#ll th{cursor:pointer;user-select:none;white-space:normal;overflow-wrap:normal;word-break:normal;vertical-align:bottom;line-height:1.35}
+#ll td{vertical-align:top}
+/* headings wrap between words; long text columns get widths from their content (see _rest.js) */
+#ll th{max-width:150px}
 #ll th .ar{opacity:.35;margin-left:4px}
 #ll th.sorted .ar{opacity:1;color:var(--wave)}
 #ll tbody tr{cursor:pointer}
@@ -1535,6 +1538,13 @@ DATA.forEach((r,i)=>{ const v=REC.v[i]; REC.cols.forEach((c,j)=>{ let x=REC.u[v[
 const COLS=REC.cols.map((c,j)=>({k:'x'+j,src:c,l:RLAB[c]||hum(c),r:c in RNUM||c==='ASSOCIATEID'||c==='ABSTRACT',d:RNUM[c],
   f:RDATE.has(c)?mdy:c==='CLIENT_UNIT'?bl:c==='LEASING_STATUS'?title:null,pill:c==='LEASING_STATUS',jump:c==='TR_NUM',net:c==='NET_AC',cls:c==='TR_NUM'?'id':c==='MINERAL_OWNER'?'own':''}));
 state.sort=(COLS.find(c=>c.src==='TR_NUM')||COLS[0]).k;
+// Column widths follow the content: text columns whose longest value runs past ~22 characters wrap inside a capped width.
+(()=>{ const css=[]; COLS.forEach((c,i)=>{ if(c.r||RDATE.has(c.src)||c.pill||c.jump) return;
+    const L=[]; for(const r of DATA){ const v=r[c.k]; if(v!=null&&v!=='') L.push(String(c.f?c.f(v):v).length); }
+    if(!L.length) return; L.sort((x,y)=>x-y); const m=L[L.length-1], p=L[Math.floor(L.length*.9)];
+    if(m<=22) return; const w=p>45?200:p>28?160:p>16?130:110;   // typical (90th percentile) length sets the width; rare long values wrap
+    css.push(`#ll tr>*:nth-child(${i+1}){white-space:normal;width:${w}px;min-width:${w}px;max-width:${w}px}#ll td:nth-child(${i+1}){overflow-wrap:anywhere}`); });
+  const s=document.createElement('style'); s.textContent=css.join('\n'); document.head.appendChild(s); })();
 let listRows=[];
 function renderList(){
   $('#llh').innerHTML='<tr>'+COLS.map(c=>`<th class="${c.r?'r':''}${state.sort===c.k?' sorted':''}" data-k="${c.k}" scope="col">${c.l}<span class="ar">${state.sort===c.k?(state.dir>0?'▲':'▼'):'↕'}</span></th>`).join('')+'</tr>';

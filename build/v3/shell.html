@@ -320,7 +320,10 @@ td.r{font-family:var(--f-m);font-size:12px}
 .count{font-size:12.5px;color:var(--text-mid)}
 .count b{color:var(--text-hi)}
 #ll{max-height:calc(100vh - 260px);min-height:420px}
-#ll th{cursor:pointer;user-select:none}
+#ll th{cursor:pointer;user-select:none;white-space:normal;overflow-wrap:normal;word-break:normal;vertical-align:bottom;line-height:1.35}
+#ll td{vertical-align:top}
+/* headings wrap between words; long text columns get widths from their content (see _rest.js) */
+#ll th{max-width:150px}
 #ll th .ar{opacity:.35;margin-left:4px}
 #ll th.sorted .ar{opacity:1;color:var(--wave)}
 #ll tbody tr{cursor:pointer}
