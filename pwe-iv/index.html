@@ -934,6 +934,8 @@ td.r{font-family:var(--f-m);font-size:12px}
 .bctl{position:absolute;top:10px;left:10px;display:flex;gap:6px;z-index:1000}
 .bctl .seg{background:var(--panel)}
 .zctl,.leg{z-index:1000}
+/* keep Leaflet's internal layer stacking inside the map boxes so the plat viewer, drawer and tooltips stay on top */
+.pbox,.keybox{isolation:isolate}
 .tract{stroke:var(--pline);stroke-width:.8px;vector-effect:non-scaling-stroke;transition:opacity .15s}
 .tract.ctx{stroke-dasharray:3 3}
 .tract:hover{stroke:var(--text-hi);stroke-width:2px}
