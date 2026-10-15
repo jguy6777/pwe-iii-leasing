@@ -291,6 +291,10 @@ td.r{font-family:var(--f-m);font-size:12px}
 .labels text.ctx{fill:var(--text-lo)}
 .leg{position:absolute;left:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--text-mid);background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:6px 10px;max-width:calc(100% - 20px)}
 .leg span{display:inline-flex;align-items:center;gap:6px}
+.leg .lgb{display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:2px 5px;margin:-2px -1px;border-radius:6px;font:inherit;color:inherit;cursor:pointer}
+.leg .lgb:hover{background:var(--panel-2);color:var(--text-hi)}
+.leg .lgb[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
+.tract.off{fill-opacity:0!important;stroke-opacity:.35}
 .leg .grad{width:70px;height:9px;border-radius:999px;background:linear-gradient(90deg,var(--unleased),var(--leased))}
 .lg{width:11px;height:11px;border-radius:3px;display:inline-block}
 .lg.ctx{background:var(--ctx);outline:1px dashed var(--text-lo);outline-offset:-1px}
@@ -617,7 +621,8 @@ function render(){ Object.entries(FK).forEach(([k,[sel]])=>{ const el=$(sel); if
   renderUnitSel(); renderChips(); renderKPIs(); renderUnitBars(); renderGauge(); renderDonut(); renderLists(); renderBoard(); renderKey(); renderList(); renderPlat(); }
 const TABS=['ov','un','ll']; let curTab=null;
 function setTab(t){ if(t!==curTab){ curTab=t; scrollTo(0,0); } TABS.forEach(k=>{ $('#tab-'+k).setAttribute('aria-selected',t===k); $('#pane-'+k).hidden=t!==k; });
-  if(t==='un') requestAnimationFrame(()=>{ PL.fitKey=PL.tract?state.unit:null; renderPlat(); if(PL.tract){ fitPlat(); zoomTract(PL.tract); } }); }
+  if(t==='un') requestAnimationFrame(()=>{ PL.fitKey=PL.tract?state.unit:null; renderPlat(); if(PL.tract){ fitPlat(); zoomTract(PL.tract); } });
+  if(t==='ll'&&LL.dirty) renderList(); }
 TABS.forEach(k=>$('#tab-'+k).onclick=()=>setTab(k));
 // size the overview map so the whole map fits in the window on first view
 function fitKeyBox(){ const box=$('.keybox'); if(!box||$('#pane-ov').hidden) return; if(innerWidth<=760){ box.style.height=''; return; }

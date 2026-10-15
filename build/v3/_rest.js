@@ -76,7 +76,21 @@ state.sort=(COLS.find(c=>c.src==='TR_NUM')||COLS[0]).k;
     css.push(`#ll tr>*:nth-child(${i+1}){white-space:normal;width:${w}px;min-width:${w}px;max-width:${w}px}#ll td:nth-child(${i+1}){overflow-wrap:anywhere}`); });
   const s=document.createElement('style'); s.textContent=css.join('\n'); document.head.appendChild(s); })();
 let listRows=[];
+// Records is built only while its tab is open, and drawn 200 rows at a time as you scroll (all rows still feed counts, search, sort and export).
+const LL={dirty:true,shown:0,step:200};
+function rowHtml(r,i){ return `<tr tabindex="0" data-i="${i}">`+COLS.map(c=>{ let v=r[c.k];
+    if(c.pill){ const g=gOf(r.g); return `<td><span class="spill"><i class="sw" style="background:var(${g.c})"></i>${g.label}</span></td>`; }
+    if(c.net&&r.dup) return `<td class="r muted" title="Repeat of this owner's interest under another lease; counted once">${fmt(v||0,4)}*</td>`;
+    if(v==null||v===''||v===BLANK) return `<td class="${c.r?'r ':''}muted">–</td>`;
+    v=c.d!=null?fmt(v,c.d):c.f?c.f(v):v;
+    if(c.jump) return `<td class="${c.cls||''}"><button type="button" class="jump" data-jump="${esc(r.id)}" data-tip="Show on plat map">${esc(v)}</button></td>`;
+    return `<td class="${c.r?'r ':''}${c.cls||''}"${c.cls==='own'?` title="${esc(v)}"`:''}>${esc(v)}</td>`; }).join('')+'</tr>'; }
+function moreRows(){ if(LL.shown>=listRows.length) return; const n=Math.min(listRows.length,LL.shown+LL.step);
+  $('#llb').insertAdjacentHTML('beforeend',listRows.slice(LL.shown,n).map((r,j)=>rowHtml(r,LL.shown+j)).join('')); LL.shown=n; }
+$('#ll').addEventListener('scroll',e=>{ const el=e.currentTarget; if(el.scrollTop+el.clientHeight>el.scrollHeight-600) moreRows(); },{passive:true});
 function renderList(){
+  if($('#pane-ll').hidden){ $('#llct').textContent=fmt(filtered({q:true}).length); LL.dirty=true; return; }
+  LL.dirty=false;
   $('#llh').innerHTML='<tr>'+COLS.map(c=>`<th class="${c.r?'r':''}${state.sort===c.k?' sorted':''}" data-k="${c.k}" scope="col">${c.l}<span class="ar">${state.sort===c.k?(state.dir>0?'▲':'▼'):'↕'}</span></th>`).join('')+'</tr>';
   $$('#llh th').forEach(th=>th.onclick=()=>{ const k=th.dataset.k; if(state.sort===k) state.dir*=-1; else { state.sort=k; state.dir=COLS.find(c=>c.k===k).r?-1:1; } renderList(); });
   const rows=filtered({q:true}), k=state.sort, d=state.dir;
@@ -84,14 +98,9 @@ function renderList(){
     return (typeof x==='number'&&typeof y==='number'?x-y:String(x).localeCompare(String(y),undefined,{numeric:true}))*d; });
   listRows=rows;
   $('#llShown').textContent=fmt(rows.length); $('#llTracts').textContent=fmt(tracts(rows)); $('#llAc').textContent=fmt(net(rows),2); $('#llct').textContent=fmt(rows.length);
-  if(!rows.length){ $('#llb').innerHTML=`<tr><td colspan="${COLS.length}" class="empty">No records match. Clear a filter or the search.</td></tr>`; return; }
-  $('#llb').innerHTML=rows.map((r,i)=>`<tr tabindex="0" data-i="${i}">`+COLS.map(c=>{ let v=r[c.k];
-    if(c.pill){ const g=gOf(r.g); return `<td><span class="spill"><i class="sw" style="background:var(${g.c})"></i>${g.label}</span></td>`; }
-    if(c.net&&r.dup) return `<td class="r muted" title="Repeat of this owner's interest under another lease; counted once">${fmt(v||0,4)}*</td>`;
-    if(v==null||v===''||v===BLANK) return `<td class="${c.r?'r ':''}muted">–</td>`;
-    v=c.d!=null?fmt(v,c.d):c.f?c.f(v):v;
-    if(c.jump) return `<td class="${c.cls||''}"><button type="button" class="jump" data-jump="${esc(r.id)}" data-tip="Show on plat map">${esc(v)}</button></td>`;
-    return `<td class="${c.r?'r ':''}${c.cls||''}"${c.cls==='own'?` title="${esc(v)}"`:''}>${esc(v)}</td>`; }).join('')+'</tr>').join('');
+  $('#ll').scrollTop=0;
+  if(!rows.length){ $('#llb').innerHTML=`<tr><td colspan="${COLS.length}" class="empty">No records match. Clear a filter or the search.</td></tr>`; LL.shown=0; return; }
+  $('#llb').innerHTML=''; LL.shown=0; moreRows();
 }
 $('#llb').addEventListener('click',e=>{ const j=e.target.closest('[data-jump]'); if(j){ openTract(j.dataset.jump); return; } const tr=e.target.closest('tr[data-i]'); if(tr) openDrawer(listRows[+tr.dataset.i]); });
 $('#llb').addEventListener('keydown',e=>{ const tr=e.target.closest('tr[data-i]'); if(tr&&e.key==='Enter') openDrawer(listRows[+tr.dataset.i]); });

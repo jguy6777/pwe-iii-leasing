@@ -5,7 +5,7 @@ const SHP_IDS=new Set(GEO.t.map(t=>t.id));
 const MISSING=[...new Set(DATA.map(r=>r.id))].filter(id=>!SHP_IDS.has(id));
 const bnd=b=>L.latLngBounds([b[0],b[1]],[b[2],b[3]]);
 const FULLB=bnd(GEO.b);
-const PL={fitKey:null,tract:null,shade:'st',base:'sat',grid:true};
+const PL={fitKey:null,tract:null,shade:'st',base:'sat',grid:true,hide:new Set()}; // hide: lease statuses switched off from the legend
 try{ const v=localStorage.getItem('pwe-shade'); if(v==='st'||v==='pct') PL.shade=v; }catch(e){}
 try{ const v=localStorage.getItem('pwe-base'); if(v==='sat'||v==='map') PL.base=v; }catch(e){}
 try{ const v=localStorage.getItem('pwe-grid'); if(v==='0') PL.grid=false; }catch(e){}
@@ -50,7 +50,7 @@ function drawMap(m){
   G.tracts.clearLayers(); G.units.clearLayers(); G.sel.clearLayers();
   const match=new Set(filtered({noUnit:true}).map(r=>r.id)), anyF=['ls','lessee','form','abs'].some(k=>state[k]);
   GEO.t.forEach(t=>{ const inUnit=!state.unit||t.unit===state.unit, hit=t.st==='X'||!anyF||match.has(t.id), ctx=t.st==='X', dim=!inUnit||!hit;
-    const p=L.polygon(t.c,{renderer:m._R,className:['tract',ctx?'ctx':'',dim?'dim':'',PL.tract===t.id&&id==='p'?'sel':''].filter(Boolean).join(' '),
+    const p=L.polygon(t.c,{renderer:m._R,className:['tract',ctx?'ctx':'',dim?'dim':'',PL.hide.has(t.st)?'off':'',PL.tract===t.id&&id==='p'?'sel':''].filter(Boolean).join(' '),
       fillColor:ctx?'transparent':tractFill(t,id),fillOpacity:ctx?0:(sat?.88:.9),weight:1,bubblingMouseEvents:false}).addTo(G.tracts);
     const el=p.getElement(); if(el){ el.setAttribute('data-id',t.id); el.setAttribute('data-u',t.unit||''); el.setAttribute('data-tip',tipOf(t)); }
     p.on('click',()=>onTract(m,t)); });
@@ -75,8 +75,18 @@ function drawLabels(m){ const G=m._L.labels; G.clearLayers(); if(!m._loaded) ret
   else GEO.u.forEach(u=>{ if(u.ctx&&GEO.u.some(v=>!v.ctx&&ushort(v.u).toUpperCase()===u.u.toUpperCase())) return; lab(u.l,u.ctx?title(u.u):ushort(u.u),'ul'+(u.ctx?' ctx':'')+(m._id==='k'?' k':'')); });
   if(m._id==='p'&&STR&&PL.grid&&m.getZoom()>=12.5) STR.p.forEach(p=>{ if(vb.contains([p[0],p[1]])) lab([p[0],p[1]],p[2],'sec'); }); }
 
-function legendHtml(){ if(PL.shade==='pct') return `<span><i class="lg" style="background:var(--s-work)"></i>0%</span><span class="grad"></span><span><i class="lg" style="background:var(--s-acq)"></i>100% leased</span><span><i class="lg" style="background:var(--p-none)"></i>No net interest</span>${GEO.t.some(t=>t.st==='X')?'<span><i class="lg ctx"></i>Not in export</span>':''}`;
-  return ['L','P','U','Z','X'].filter(k=>k!=='X'||GEO.t.some(t=>t.st==='X')).map(k=>`<span><i class="lg ${k==='P'?'part':k==='X'?'ctx':''}" style="${k==='P'||k==='X'?'':'background:'+PST[k].fill}"></i>${PST[k].label}</span>`).join('')+(STR&&PL.grid?'<span><i class="lg strk"></i>Section grid</span>':''); }
+// legend items are buttons: click one to hide / show those tracts on both maps (Section grid toggles the grid)
+const legBtn=k=>`<button type="button" class="lgb" data-st="${k}" aria-pressed="${!PL.hide.has(k)}" title="Click to ${PL.hide.has(k)?'show':'hide'} ${PST[k].label.toLowerCase()} tracts"><i class="lg ${k==='P'?'part':k==='X'?'ctx':''}" style="${k==='P'||k==='X'?'':'background:'+PST[k].fill}"></i>${PST[k].label}</button>`;
+const hasCtx=()=>GEO.t.some(t=>t.st==='X');
+function legendHtml(){ const grid=STR?`<button type="button" class="lgb" data-grid="1" aria-pressed="${PL.grid}" title="Click to ${PL.grid?'hide':'show'} the section grid"><i class="lg strk"></i>Section grid</button>`:'';
+  if(PL.shade==='pct') return `<span><i class="lg" style="background:var(--s-work)"></i>0%</span><span class="grad"></span><span><i class="lg" style="background:var(--s-acq)"></i>100% leased</span>${legBtn('Z')}${hasCtx()?legBtn('X'):''}${grid}`;
+  return ['L','P','U','Z','X'].filter(k=>k!=='X'||hasCtx()).map(legBtn).join('')+grid; }
+function keyLegendHtml(){ return ['L','P','U','X'].filter(k=>k!=='X'||hasCtx()).map(legBtn).join(''); }
+function onLegend(e){ const b=e.target.closest('.lgb'); if(!b) return;
+  if(b.dataset.grid){ $('#z-grid')&&$('#z-grid').click(); return; }
+  const k=b.dataset.st; PL.hide.has(k)?PL.hide.delete(k):PL.hide.add(k);
+  if(KM) drawMap(KM); if(MP&&MP._loaded) drawMap(MP); $('#key-leg').innerHTML=keyLegendHtml(); $('#pl-leg').innerHTML=legendHtml(); }
+$('#key-leg').addEventListener('click',onLegend); $('#pl-leg').addEventListener('click',onLegend);
 
 // ---------- section-township-range grid (SONRIS) ----------
 // Snapshot of SONRIS DNRSvc/COMMON section + township lines (1:24,000) and section points, pulled 10/15/2026.
@@ -93,7 +103,7 @@ function renderKey(){ const el=$('#keymap'); if(!el) return;
   if(!KM){ KM=makeMap(el,'k',{dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,touchZoom:false});
     KM.setView(FULLB.getCenter(),10,{animate:false}); if(KM.getSize().x) KM.fitBounds(FULLB,{padding:[14,14],animate:false}); KM._loaded=true; }
   setBase(KM); drawMap(KM);
-  $('#key-leg').innerHTML=['L','P','U','X'].map(k=>`<span><i class="lg ${k==='P'?'part':k==='X'?'ctx':''}" style="${k==='P'||k==='X'?'':'background:'+PST[k].fill}"></i>${PST[k].label}</span>`).join('');
+  $('#key-leg').innerHTML=keyLegendHtml();
   $('#key-foot').textContent=GEO.t.some(t=>t.st==='X')?'Dashed outlines are parcels in the parcel file that are not in this export.':'Basemap: Esri aerial imagery or streets (switch on the map tab).'; }
 
 // ---------- plat map ----------
