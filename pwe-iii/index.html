@@ -1379,7 +1379,10 @@ function makeMap(el,id,opts){
   m._id=id; m._R=L.svg({padding:.6}); m._G=L.svg({pane:'grid',padding:.6});
   m._L={tracts:L.layerGroup().addTo(m),units:L.layerGroup().addTo(m),sel:L.layerGroup().addTo(m),grid:L.layerGroup().addTo(m),labels:L.layerGroup().addTo(m)};
   m.on('movestart',hideTip);
-  new ResizeObserver(()=>{ m.invalidateSize(); if(id==='k') m.fitBounds(FULLB,{padding:[14,14],animate:false}); }).observe(el);
+  // a map created while its tab is hidden has no size yet: fit the view once it gets one
+  new ResizeObserver(()=>{ m.invalidateSize(); if(!m.getSize().x) return;
+    if(id==='k') m.fitBounds(FULLB,{padding:[14,14],animate:false});
+    else if(PL.fitKey!==state.unit){ fitPlat(); if(PL.tract) zoomTract(PL.tract); } }).observe(el);
   return m; }
 function setBase(m){ const want=PL.base+(PL.base==='map'?(isDark()?'-d':'-l'):''); if(m._baseKey===want) return;
   if(m._base) m.removeLayer(m._base); m._base=BASES[PL.base]().addTo(m); m._baseKey=want;
@@ -1437,20 +1440,20 @@ function renderGridNote(){ const b=$('#z-grid'); if(!b) return; b.parentElement.
 let KM=null;
 function renderKey(){ const el=$('#keymap'); if(!el) return;
   if(!KM){ KM=makeMap(el,'k',{dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,touchZoom:false});
-    KM.fitBounds(FULLB,{padding:[14,14],animate:false}); KM._loaded=true; }
+    KM.setView(FULLB.getCenter(),10,{animate:false}); if(KM.getSize().x) KM.fitBounds(FULLB,{padding:[14,14],animate:false}); KM._loaded=true; }
   setBase(KM); drawMap(KM);
   $('#key-leg').innerHTML=['L','P','U','X'].map(k=>`<span><i class="lg ${k==='P'?'part':k==='X'?'ctx':''}" style="${k==='P'||k==='X'?'':'background:'+PST[k].fill}"></i>${PST[k].label}</span>`).join('');
   $('#key-foot').textContent=GEO.t.some(t=>t.st==='X')?'Dashed outlines are parcels in the parcel file that are not in this export.':'Basemap: Esri aerial imagery or CARTO streets (switch on the map tab).'; }
 
 // ---------- plat map ----------
 let MP=null;
-function fitPlat(){ if(!MP) return; const b=state.unit&&state.unit!==OUT?unitBox(state.unit):null; MP.fitBounds(b?bnd(b):FULLB,{padding:[24,24]}); PL.fitKey=state.unit; }
+function fitPlat(){ if(!MP) return; if(!MP.getSize().x){ PL.fitKey=null; return; } const b=state.unit&&state.unit!==OUT?unitBox(state.unit):null; MP.fitBounds(b?bnd(b):FULLB,{padding:[24,24]}); PL.fitKey=state.unit; }
 // center on a tract with a margin around all of its parcel pieces
-function zoomTract(id){ const b=tractBox(id); if(!b||!MP) return; const B=bnd(b), s=Math.max(B.getNorth()-B.getSouth(),B.getEast()-B.getWest(),.004);
+function zoomTract(id){ const b=tractBox(id); if(!b||!MP||!MP.getSize().x) return; const B=bnd(b), s=Math.max(B.getNorth()-B.getSouth(),B.getEast()-B.getWest(),.004);
   const c=B.getCenter(); MP.fitBounds(L.latLngBounds([c.lat-s*1.1,c.lng-s*1.1],[c.lat+s*1.1,c.lng+s*1.1]),{maxZoom:17}); }
 function initPlat(){ if(MP) return;
   MP=makeMap($('#plat'),'p',{});
-  MP.fitBounds(FULLB,{padding:[24,24],animate:false}); MP._loaded=true;
+  MP.setView(FULLB.getCenter(),10,{animate:false}); if(MP.getSize().x) MP.fitBounds(FULLB,{padding:[24,24],animate:false}); MP._loaded=true;
   MP.on('click',()=>{ if(PL.tract) unselectTract(); });
   MP.on('zoomend moveend',()=>drawLabels(MP));
   $('#z-in').onclick=()=>MP.zoomIn(); $('#z-out').onclick=()=>MP.zoomOut(); $('#z-fit').onclick=()=>fitPlat();
