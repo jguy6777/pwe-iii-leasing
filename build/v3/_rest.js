@@ -54,8 +54,8 @@ function renderSide(){
 $$('#pl-shade button').forEach(b=>b.onclick=()=>{ PL.shade=b.dataset.v; try{localStorage.setItem('pwe-shade',PL.shade)}catch(e){} renderPlat(); });
 
 // ---------- records ----------
-const COLS=[{k:'id',l:'Tract ID',cls:'id'},{k:'unitL',l:'Unit',f:ushort},{k:'tn',l:'Plat tract'},{k:'owner',l:'Mineral owner',cls:'own'},{k:'ls',l:'Landowner status',pill:1},
-  {k:'int',l:'Min int',r:1,d:6},{k:'tac',l:'Tract ac',r:1,d:3},{k:'cac',l:'Net ac',r:1,d:4},{k:'lesseeL',l:'Current lessee',f:bl},{k:'lno',l:'Lease no.'},{k:'formL',l:'Lease form',f:bl},{k:'eff',l:'Effective',f:mdy},{k:'exp',l:'Expires',f:mdy}];
+const COLS=[{k:'lno',l:'Contract no.'},{k:'id',l:'Tract ID',cls:'id'},{k:'unitL',l:'Unit',f:ushort},{k:'tn',l:'Plat tract'},{k:'owner',l:'Mineral owner',cls:'own'},{k:'ls',l:'Landowner status',pill:1},
+  {k:'int',l:'Min int',r:1,d:6},{k:'tac',l:'Tract ac',r:1,d:3},{k:'cac',l:'Net ac',r:1,d:4},{k:'lesseeL',l:'Current lessee',f:bl},{k:'eff',l:'Effective',f:mdy},{k:'exp',l:'Expires',f:mdy}];
 // no plat tract numbers (e.g. PWE IV) → drop that column
 if(!Object.keys(TNUM).length) COLS.splice(COLS.findIndex(c=>c.k==='tn'),1);
 let listRows=[];
@@ -79,21 +79,40 @@ function renderList(){
 $('#llb').addEventListener('click',e=>{ const j=e.target.closest('[data-jump]'); if(j){ openTract(j.dataset.jump); return; } const tr=e.target.closest('tr[data-i]'); if(tr) openDrawer(listRows[+tr.dataset.i]); });
 $('#llb').addEventListener('keydown',e=>{ const tr=e.target.closest('tr[data-i]'); if(tr&&e.key==='Enter') openDrawer(listRows[+tr.dataset.i]); });
 let qt; $('#q').addEventListener('input',e=>{ clearTimeout(qt); qt=setTimeout(()=>{ state.q=e.target.value.trim(); renderList(); renderChips(); },120); });
+// Export the rows currently shown in Records to an Excel workbook: one sheet, formatted as an Excel table
+// (green header, filter buttons). ExcelJS is loaded only when the button is clicked.
+function loadExcelJS(){ if(window.ExcelJS) return Promise.resolve(window.ExcelJS);
+  const tryLoad=src=>new Promise((ok,no)=>{ const s=document.createElement('script'); s.src=src; s.onload=()=>window.ExcelJS?ok(window.ExcelJS):no(); s.onerror=no; document.head.appendChild(s); });
+  return tryLoad('../lib/exceljs.min.js').catch(()=>tryLoad('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js')); }
+const xdate=v=>{ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v||''); return m?new Date(Date.UTC(+m[1],+m[2]-1,+m[3])):null; };
 $('#copy').onclick=async()=>{
-  const q=v=>{ v=v==null?'':String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
-  const hdr=['Tract ID','Unit','Plat tract','Abstract','Mineral owner','Owner ID','Address','Phone','Landowner status','Mineral interest','Tract acres','Net acres','Net acres counted','Current lessee','Lease no.','Lease form','Effective','Expires'];
-  const csv=[hdr.join(',')].concat(listRows.map(r=>[r.id,r.unit,r.tn,r.abs,r.owner,r.oid,r.addr,r.phone,r.ls,r.int,r.tac,r.nac,r.cac,r.lessee,r.lno,r.form,mdy(r.eff),mdy(r.exp)].map(q).join(','))).join('\n');
-  const b=$('#copy'), old=b.textContent;
-  try{ await navigator.clipboard.writeText(csv); b.textContent=`Copied ${fmt(listRows.length)} rows`; }
-  catch(e){ const ta=document.createElement('textarea'); ta.value=csv; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); b.textContent='Copied'; }catch(_){ b.textContent='Copy failed'; } ta.remove(); }
-  setTimeout(()=>b.textContent=old,1800); };
+  const b=$('#copy'), old=b.textContent; b.disabled=true; b.textContent='Building…';
+  try{
+    const XL=await loadExcelJS(), U=(COLS.find(c=>c.k==='unitL')||{l:'Unit'}).l;
+    const hasTn=Object.keys(TNUM).length>0, hasAbs=listRows.some(r=>r.abs!=null);
+    const C=[['Contract no.',r=>r.lno||null,14],['Tract ID',r=>r.id,18],[U,r=>r.unit?bl(r.unit):'Outside',16],hasTn&&['Plat tract',r=>r.tn||null,10],hasAbs&&['Abstract',r=>r.abs!=null?'A-'+r.abs:null,10],
+      ['Mineral owner',r=>r.owner,40],['Owner ID',r=>r.oid??null,11],['Address',r=>r.addr||null,40],['Phone',r=>r.phone||null,16],['Landowner status',r=>title(r.ls),15],
+      ['Mineral interest',r=>r.int??null,15,'0.000000'],['Tract acres',r=>r.tac??null,12,'#,##0.000'],['Net acres',r=>r.nac??null,12,'#,##0.0000'],['Net acres counted',r=>r.cac??0,15,'#,##0.0000'],
+      ['Current lessee',r=>r.lessee?title(r.lessee):null,30],['Effective',r=>xdate(r.eff),12,'mm/dd/yyyy'],['Expires',r=>xdate(r.exp),12,'mm/dd/yyyy']].filter(Boolean);
+    const wb=new XL.Workbook(); wb.creator='PWE Dashboard'; wb.created=new Date();
+    const ws=wb.addWorksheet('Records',{views:[{state:'frozen',ySplit:1}]});
+    ws.addTable({name:'Records',ref:'A1',headerRow:true,style:{theme:'TableStyleMedium7',showRowStripes:true},
+      columns:C.map(c=>({name:c[0],filterButton:true})),rows:listRows.map(r=>C.map(c=>c[1](r)))});
+    C.forEach((c,i)=>{ const col=ws.getColumn(i+1); col.width=c[2]; if(c[3]) col.numFmt=c[3]; });
+    const hr=ws.getRow(1); hr.font={bold:true,color:{argb:'FFFFFFFF'}}; hr.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF2F6B45'}}; hr.alignment={vertical:'middle'}; hr.height=20;
+    const buf=await wb.xlsx.writeBuffer(), d=$('.datepill')?$('.datepill').textContent.trim():'';
+    const name=`${document.title.replace(/ Leasing$/,'')} Records${state.unit?' - '+bl(state.unit):''}${d?' - '+d.replace(/,/g,''):''}.xlsx`;
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    b.textContent=`Exported ${fmt(listRows.length)} rows`;
+  }catch(e){ console.error(e); b.textContent='Export failed'; }
+  b.disabled=false; setTimeout(()=>b.textContent=old,2200); };
 
 function openDrawer(r){ const g=gOf(r.g), row=(l,v)=>(v==null||v==='')?'':`<dt>${l}</dt><dd>${v}</dd>`, n=(v,d)=>v!=null?fmt(v,d):'';
   $('#d-id').textContent=r.id+(r.tn?' · Tract '+r.tn:''); $('#d-owner').textContent=r.owner;
   $('#d-body').innerHTML=`<h4>Status</h4><dl>${row('Landowner status',`<span class="spill"><i class="sw" style="background:var(${g.c})"></i>${g.label}</span>`)}${row('Title status',esc(title(r.title)))}${row('Held by',esc(r.held))}</dl>
    <h4>Mineral owner</h4><dl>${row('Name',esc(r.owner))}${row('Owner ID',esc(r.oid))}${row('Address',esc(r.addr))}${row('Phone',esc(r.phone))}${row('Mineral interest',n(r.int,8))}${row('Net acres',n(r.nac,4)+(r.dup?' (repeat row, counted once)':''))}</dl>
    <h4>Tract</h4><button class="btn pri" type="button" id="d-map" style="margin-bottom:10px">Show on plat map</button><dl>${row('Tract ID',esc(r.id))}${row('Plat tract',esc(r.tn))}${row('Unit',esc(bl(r.unitL)))}${row('Abstract',esc(r.absL))}${row('County',esc(title(r.cty)))}${row('Tract acres',n(r.tac,3))}</dl>
-   ${r.lno||r.lessee?`<h4>Lease</h4><dl>${row('Lease no.',esc(r.lno))}${row('Lessor',esc(r.lessor))}${row('Current lessee',esc(r.lessee))}${row('Vol/Page',esc(r.vp))}${row('Lease form',esc(title(r.form)))}${row('Effective',esc(mdy(r.eff)))}${row('Expires',esc(mdy(r.exp)))}${row('Term',esc(r.term))}${row('Gross acres',n(r.lgac,2))}${row('Net acres',n(r.lnac,4))}${row('Royalty',r.roy!=null?fmt(r.roy*100,2)+'%':'')}${row('Bonus / ac',r.bonus!=null?'$'+fmt(r.bonus,2):'')}</dl>`:''}`;
+   ${r.lno||r.lessee?`<h4>Lease</h4><dl>${row('Contract no.',esc(r.lno))}${row('Lessor',esc(r.lessor))}${row('Current lessee',esc(r.lessee))}${row('Vol/Page',esc(r.vp))}${row('Effective',esc(mdy(r.eff)))}${row('Expires',esc(mdy(r.exp)))}${row('Term',esc(r.term))}${row('Gross acres',n(r.lgac,2))}${row('Net acres',n(r.lnac,4))}${row('Royalty',r.roy!=null?fmt(r.roy*100,2)+'%':'')}${row('Bonus / ac',r.bonus!=null?'$'+fmt(r.bonus,2):'')}</dl>`:''}`;
   $('#d-map').onclick=()=>{ closeDrawer(); openTract(r.id); };
   $('#drawer').hidden=false; $('#scrim').hidden=false; $('#d-close').focus(); }
 const closeDrawer=()=>{ $('#drawer').hidden=true; $('#scrim').hidden=true; };
