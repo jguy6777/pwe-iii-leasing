@@ -889,19 +889,24 @@ td.r{font-family:var(--f-m);font-size:12px}
 
 /* units tab */
 .pane{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;min-width:0}
-.uhead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px 22px;align-items:center}
+/* unit summary sits in a column left of the map */
+.uhead{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start;align-content:start}
+.uhead .meta{line-height:1.5}
+.uhead .uacts{grid-column:1/-1;flex-direction:column;align-items:stretch}
+.uhead .uacts .btn{justify-content:center}
 .uhead .navb{display:flex;gap:8px}
 .uhead h2{margin:0;font:600 22px/1.2 var(--f-d);color:var(--pine-ink)}
 .uhead .meta{font:500 11.5px var(--f-m);color:var(--text-lo);margin-top:3px}
-.uhead .stats{grid-column:1/-1}
+.uhead .stats{grid-column:1/-1;grid-template-columns:minmax(0,1fr)}
 .uacts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .stat{background:var(--panel-2);border:1px solid var(--border-soft);border-radius:10px;padding:10px 12px;min-width:0}
 .stat .lbl{display:flex;align-items:center;gap:6px}
 .stat b{display:block;font:700 19px/1.2 var(--f-m);margin-top:4px}
 .stat span.u{font:500 11.5px var(--f-b);color:var(--text-lo);margin-left:3px}
-.platgrid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px;align-items:start}
-.pbox{position:relative;margin:0 14px 14px;border-radius:12px;background:var(--panel-2);border:1px solid var(--border-soft);height:min(72vh,780px);min-height:440px;overflow:hidden}
+.platgrid{display:grid;grid-template-columns:250px minmax(0,1fr) 360px;gap:18px;align-items:start}
+@media (max-width:1500px){.platgrid{grid-template-columns:220px minmax(0,1fr) 320px}}
+.pbox{position:relative;margin:0 14px 14px;border-radius:12px;background:var(--panel-2);border:1px solid var(--border-soft);height:max(440px,calc(100vh - 340px));overflow:hidden}
 /* Leaflet maps */
 .lmap{position:absolute;inset:0;background:var(--panel-2)}
 .leaflet-container{font-family:var(--f-b);background:var(--panel-2)}
@@ -951,7 +956,7 @@ td.r{font-family:var(--f-m);font-size:12px}
 .lg{width:11px;height:11px;border-radius:3px;display:inline-block}
 .lg.ctx{background:var(--ctx);outline:1px dashed var(--text-lo);outline-offset:-1px}
 .zctl{position:absolute;top:10px;right:10px;display:grid;gap:8px}
-.pside{display:grid;gap:14px;max-height:calc(min(72vh,780px) + 80px);overflow:auto}
+.pside{display:grid;gap:14px;max-height:max(520px,calc(100vh - 230px));overflow:auto}
 .pside h3{margin:2px 0 8px;font:600 18px var(--f-d)}
 .pid{font:500 12px var(--f-m);color:var(--wave)}
 .kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 12px;font-size:12.5px}
@@ -1007,7 +1012,7 @@ td.r{font-family:var(--f-m);font-size:12px}
 .dvb img{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none;user-select:none;-webkit-user-drag:none;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.18)}
 
 @media (max-width:1500px){.ovgrid{grid-template-columns:minmax(270px,1fr) minmax(0,1.7fr) minmax(270px,1fr)}}
-@media (max-width:1180px){.ovgrid{grid-template-columns:minmax(0,1fr)}.ovgrid .col.right{grid-template-columns:minmax(0,1fr)}.work2{grid-template-columns:minmax(0,1fr)}.platgrid{grid-template-columns:minmax(0,1fr)}.pside{max-height:none}.keybox{height:460px}}
+@media (max-width:1180px){.ovgrid{grid-template-columns:minmax(0,1fr)}.ovgrid .col.right{grid-template-columns:minmax(0,1fr)}.work2{grid-template-columns:minmax(0,1fr)}.platgrid{grid-template-columns:minmax(0,1fr)}.pside{max-height:none}.uhead{grid-template-columns:auto minmax(0,1fr) auto}.uhead .uacts{grid-column:auto;flex-direction:row}.uhead .stats{grid-template-columns:repeat(4,minmax(0,1fr))}.pbox{height:min(70vh,700px)}.keybox{height:460px}}
 @media (min-width:761px){.kic{display:none}.kpi{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:760px){
   .frame{grid-template-columns:minmax(0,1fr);padding:0 16px 40px;gap:14px}
@@ -1098,8 +1103,8 @@ td.r{font-family:var(--f-m);font-size:12px}
 
     <!-- UNITS -->
     <section id="pane-un" role="tabpanel" aria-labelledby="tab-un" class="pane" hidden>
-      <div class="c uhead" id="uhead"></div>
       <div class="platgrid">
+        <div class="c uhead" id="uhead"></div>
         <div class="c mapc">
           <div class="ch"><div><h2>Plat map</h2><div class="sub">Drag to pan · scroll or + / − to zoom · click a tract for owners and leases</div></div>
             <div class="qwrap"><input type="search" id="platq" list="tractlist" placeholder="Go to tract or owner…" aria-label="Go to a tract or owner"><span class="qmsg" id="platq-msg" role="status"></span></div><div class="seg" id="pl-shade" role="group" aria-label="Shade tracts by"><button data-v="st">Lease status</button><button data-v="pct">% leased</button></div></div>
