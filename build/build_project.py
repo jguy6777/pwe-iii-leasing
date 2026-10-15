@@ -61,7 +61,7 @@ for k in ['prep', 'board', 'goal', 'notes', 'rest']:
 t = t.replace('/*__PLATS__*/', open(P['plats']).read())
 for k in ['CODE', 'REGION', 'DATE_S', 'DATE_L', 'ACRESRC']:
     t = t.replace(f'%%{k}%%', P[k])
-t = t.replace('%%HOME%%', '<a class="homelink" href="../">← All PWE projects</a>' if home else '')
+t = t.replace('%%HOME%%', '<a class="homelink" href="../">← PWE Dashboard</a>' if home else '')
 for a, b in P['words']:
     n = t.count(a)
     assert n >= 1, f'{key}: wording not found: {a!r}'

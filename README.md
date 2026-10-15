@@ -1,7 +1,7 @@
-# PWE Leasing Dashboards
+# PWE Dashboard
 
 Leased net acres for Pine Wave Energy Partners projects, built from each project's Mapper Export.
-Deployed on Vercel (project `pwe-iii-leasing`, team segland); every push to `main` redeploys.
+Live at https://pwe-dashboard.vercel.app (Vercel project `pwe-dashboard`, team segland); every push to `main` redeploys.
 
 ## Pages
 | Path | What it is |

@@ -99,7 +99,7 @@ logo = open('v3/_logo.txt').read(); seg = open('v3/_seglogo.txt').read()
 latest = 'October 15, 2026'
 html = f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PWE Leasing</title>
+<title>PWE Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
@@ -148,7 +148,7 @@ dd small{{font:500 11px var(--f-b);color:var(--text-lo);margin-left:3px}}
 <div class="wrap">
   <header class="head">
     <div class="brand"><img class="logo" src="{logo}" alt="Pine Wave Energy Partners">
-      <div><div class="upd">Leased net acres by project</div><h1>PWE Leasing Dashboards</h1><div class="sub">Pine Wave Energy Partners · pick a project to open its dashboard</div></div></div>
+      <div><div class="upd">Leased net acres by project</div><h1>PWE Dashboard</h1><div class="sub">Pine Wave Energy Partners · pick a project to open its dashboard</div></div></div>
     <div class="hside"><button class="tbtn" type="button" id="theme">Dark</button>
       <div class="hcol"><img class="seglogo" src="{seg}" alt="Schoeffler Energy Group" title="Prepared by Schoeffler Energy Group"><div class="datepill">{latest}</div></div></div>
   </header>
