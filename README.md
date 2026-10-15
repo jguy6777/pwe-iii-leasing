@@ -10,7 +10,7 @@ Live at https://pwe-dashboard.vercel.app (Vercel project `pwe-dashboard`, team s
 | `/pwe-iii/` | PWE III dashboard (Harrison County, TX) · unit acres tie to the Bowman survey plats in `pwe-iii/plats/` |
 | `/pwe-iv/` | PWE IV dashboard (Black Lake · Natchitoches & Red River Parishes, LA) · no units or plats yet, tracts grouped by township-range |
 
-Maps use Leaflet (bundled in each page) on Esri aerial imagery or CARTO streets.
+Maps use Leaflet (bundled in each page) on Esri aerial imagery or Esri streets / dark gray (no API key).
 
 Rules for both: status = `LEASING_STATUS`, acres = `NET_AC`, each owner interest counted once per tract, no GIS acres.
 

@@ -1350,7 +1350,7 @@ function renderNotes(){
 
 
 // ---------- maps (Leaflet) ----------
-// Tract shapes are NAD83 lat/long (NADCON shift from NAD27 state plane); basemap = Esri aerial or CARTO streets.
+// Tract shapes are NAD83 lat/long (NADCON shift from NAD27 state plane); basemaps are Esri tiles that need no API key.
 GEO.t.forEach(t=>{ t.st=TSTAT[t.id]?TSTAT[t.id].s:'X'; t.unit=TSTAT[t.id]?TSTAT[t.id].unit:null; });
 const SHP_IDS=new Set(GEO.t.map(t=>t.id));
 const MISSING=[...new Set(DATA.map(r=>r.id))].filter(id=>!SHP_IDS.has(id));
@@ -1370,10 +1370,12 @@ function tractFill(t,id){ if(PL.shade==='pct'&&TSTAT[t.id]&&TSTAT[t.id].t>0) ret
 const isDark=()=>(document.documentElement.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'))==='dark';
 const BASES={
   sat:()=>L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,maxNativeZoom:19,attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics'}),
-  map:()=>L.tileLayer(`https://{s}.basemaps.cartocdn.com/${isDark()?'dark_all':'light_all'}/{z}/{x}/{y}{r}.png`,{maxZoom:20,subdomains:'abcd',attribution:'&copy; OpenStreetMap contributors &copy; CARTO'})};
+  // light theme: Esri streets; dark theme: Esri dark gray canvas with its labels
+  map:()=>{ const E=s=>L.tileLayer(`https://server.arcgisonline.com/ArcGIS/rest/services/${s}/MapServer/tile/{z}/{y}/{x}`,{maxZoom:20,maxNativeZoom:s.startsWith('Canvas')?16:19,attribution:'Tiles &copy; Esri, HERE, Garmin, OpenStreetMap contributors'});
+    return isDark()?L.layerGroup([E('Canvas/World_Dark_Gray_Base'),E('Canvas/World_Dark_Gray_Reference')]):E('World_Street_Map'); }};
 
 function makeMap(el,id,opts){
-  const m=L.map(el,Object.assign({zoomControl:false,zoomSnap:.25,zoomDelta:.5,wheelPxPerZoomLevel:100,minZoom:8,maxZoom:20},opts));
+  const m=L.map(el,Object.assign({zoomControl:false,zoomSnap:.25,zoomDelta:1,wheelPxPerZoomLevel:100,minZoom:8,maxZoom:20},opts));
   m.attributionControl.setPrefix(false);
   m.createPane('grid').style.zIndex=350;
   m._id=id; m._R=L.svg({padding:.6}); m._G=L.svg({pane:'grid',padding:.6});
@@ -1443,7 +1445,7 @@ function renderKey(){ const el=$('#keymap'); if(!el) return;
     KM.setView(FULLB.getCenter(),10,{animate:false}); if(KM.getSize().x) KM.fitBounds(FULLB,{padding:[14,14],animate:false}); KM._loaded=true; }
   setBase(KM); drawMap(KM);
   $('#key-leg').innerHTML=['L','P','U','X'].map(k=>`<span><i class="lg ${k==='P'?'part':k==='X'?'ctx':''}" style="${k==='P'||k==='X'?'':'background:'+PST[k].fill}"></i>${PST[k].label}</span>`).join('');
-  $('#key-foot').textContent=GEO.t.some(t=>t.st==='X')?'Dashed outlines are parcels in the parcel file that are not in this export.':'Basemap: Esri aerial imagery or CARTO streets (switch on the map tab).'; }
+  $('#key-foot').textContent=GEO.t.some(t=>t.st==='X')?'Dashed outlines are parcels in the parcel file that are not in this export.':'Basemap: Esri aerial imagery or streets (switch on the map tab).'; }
 
 // ---------- plat map ----------
 let MP=null;
