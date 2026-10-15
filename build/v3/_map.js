@@ -51,7 +51,7 @@ function drawMap(m){
   const match=new Set(filtered({noUnit:true}).map(r=>r.id)), anyF=['ls','lessee','form','abs'].some(k=>state[k]);
   GEO.t.forEach(t=>{ const inUnit=!state.unit||t.unit===state.unit, hit=t.st==='X'||!anyF||match.has(t.id), ctx=t.st==='X', dim=!inUnit||!hit;
     const p=L.polygon(t.c,{renderer:m._R,className:['tract',ctx?'ctx':'',dim?'dim':'',PL.tract===t.id&&id==='p'?'sel':''].filter(Boolean).join(' '),
-      fillColor:ctx?'transparent':tractFill(t,id),fillOpacity:ctx?0:(sat?.62:.88),weight:1,bubblingMouseEvents:false}).addTo(G.tracts);
+      fillColor:ctx?'transparent':tractFill(t,id),fillOpacity:ctx?0:(sat?.88:.9),weight:1,bubblingMouseEvents:false}).addTo(G.tracts);
     const el=p.getElement(); if(el){ el.setAttribute('data-id',t.id); el.setAttribute('data-u',t.unit||''); el.setAttribute('data-tip',tipOf(t)); }
     p.on('click',()=>onTract(m,t)); });
   ensureDefs(m);
