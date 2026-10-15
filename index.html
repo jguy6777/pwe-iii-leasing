@@ -870,7 +870,7 @@ function renderChips(){ const c=[], add=(k,lab,t)=>c.push(`<span class="chip">${
 function render(){ Object.entries(FK).forEach(([k,[sel]])=>{ const el=$(sel); if(el) el.value=state[k]; }); hideTip();
   renderUnitSel(); renderChips(); renderKPIs(); renderUnitBars(); renderGauge(); renderDonut(); renderLists(); renderBoard(); renderKey(); renderList(); renderPlat(); }
 const TABS=['ov','un','ll']; let curTab=null;
-function setTab(t){ if(t!==curTab){ curTab=t; scrollTo(0,0); } TABS.forEach(k=>{ $('#tab-'+k).setAttribute('aria-selected',t===k); $('#pane-'+k).hidden=t!==k; }); try{ localStorage.setItem('pwe3-tab',t); }catch(e){}
+function setTab(t){ if(t!==curTab){ curTab=t; scrollTo(0,0); } TABS.forEach(k=>{ $('#tab-'+k).setAttribute('aria-selected',t===k); $('#pane-'+k).hidden=t!==k; });
   if(t==='un') requestAnimationFrame(()=>{ PL.fitKey=PL.tract?state.unit:null; renderPlat(); if(PL.tract){ fitPlat(); zoomTract(PL.tract); } }); }
 TABS.forEach(k=>$('#tab-'+k).onclick=()=>setTab(k));
 // size the overview map so the whole map fits in the window on first view
@@ -887,7 +887,8 @@ $('#ll-ov').onclick=()=>setTab('ov'); $('#ll-un').onclick=()=>setTab('un');
   $('#theme').onclick=()=>{ const n=cur()==='light'?'dark':'light'; root.setAttribute('data-theme',n); try{ localStorage.setItem('pwe-theme',n); }catch(e){} lab(); }; })();
 renderNotes();
 render();
-let st='ov'; if(location.hash==='#records') st='ll'; else if(location.hash==='#units'||location.hash==='#plats') st='un'; else { try{ st=localStorage.getItem('pwe3-tab')||'ov'; if(!TABS.includes(st)) st='ov'; }catch(e){} }
+// always open on the Overview; a #records or #units link can still deep-link a tab
+let st='ov'; if(location.hash==='#records') st='ll'; else if(location.hash==='#units'||location.hash==='#plats') st='un';
 setTab(st);
 requestAnimationFrame(fitKeyBox); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>requestAnimationFrame(fitKeyBox));
 </script>
