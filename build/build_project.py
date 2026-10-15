@@ -11,13 +11,13 @@ PROJECTS = {
         CODE='PWE III', REGION='Harrison County, Texas',
         DATE_S='Oct 14, 2026', DATE_L='October 14, 2026',
         ACRESRC='unit acres = Bowman survey plats',
-        plats='v3/_plats_pwe3.js', data='pwe_1014.json', geo='geoll3.json', str=None,
+        plats='v3/_plats_pwe3.js', data='pwe_1014.json', geo='geoll3.json', str=None, rec='rec3.json',
         words=[]),
     'pwe4': dict(
         CODE='PWE IV', REGION='Natchitoches &amp; Red River Parishes, Louisiana',
         DATE_S='Oct 15, 2026', DATE_L='October 15, 2026',
         ACRESRC='tract acres = Mapper export (no survey plats yet)',
-        plats='v3/_plats_pwe4.js', data='pwe4_1015.json', geo='geoll4.json', str='strll4.json',
+        plats='v3/_plats_pwe4.js', data='pwe4_1015.json', geo='geoll4.json', str='strll4.json', rec='rec4.json',
         # no gas units yet: tracts are grouped by township-range, and acreage is tract acres
         words=[
             ('Units &amp; plats', 'Townships &amp; map'),
@@ -73,6 +73,7 @@ t = (t.replace('/*__LOGO__*/', open('v3/_logo.txt').read())
       .replace('/*__SEGLOGO__*/', open('v3/_seglogo.txt').read())
       .replace('/*__DATA__*/[]', open(P['data']).read())
       .replace('/*__GEO__*/{}', open(P['geo']).read())
+      .replace('/*__REC__*/{}', open(P['rec']).read())
       .replace('/*__STR__*/null', open(P['str']).read() if P['str'] else 'null')
       .replace('/*__LEAFLETCSS__*/', open('v3/_leaflet.css').read())
       .replace('/*__LEAFLETJS__*/', open('v3/_leaflet.js').read()))

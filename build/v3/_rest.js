@@ -54,10 +54,20 @@ function renderSide(){
 $$('#pl-shade button').forEach(b=>b.onclick=()=>{ PL.shade=b.dataset.v; try{localStorage.setItem('pwe-shade',PL.shade)}catch(e){} renderPlat(); });
 
 // ---------- records ----------
-const COLS=[{k:'lno',l:'Contract no.'},{k:'id',l:'Tract ID',cls:'id'},{k:'unitL',l:'Unit',f:ushort},{k:'tn',l:'Plat tract'},{k:'owner',l:'Mineral owner',cls:'own'},{k:'ls',l:'Landowner status',pill:1},
-  {k:'int',l:'Min int',r:1,d:6},{k:'tac',l:'Tract ac',r:1,d:3},{k:'cac',l:'Net ac',r:1,d:4},{k:'lesseeL',l:'Current lessee',f:bl},{k:'eff',l:'Effective',f:mdy},{k:'exp',l:'Expires',f:mdy}];
-// no plat tract numbers (e.g. PWE IV) → drop that column
-if(!Object.keys(TNUM).length) COLS.splice(COLS.findIndex(c=>c.k==='tn'),1);
+// Records columns follow a reference Mapper export layout (build_rec.py): same columns, same order, contract no. first.
+// Values come from the project's current export; REC.v holds one row of indexes into REC.u per DATA row.
+const UNITL=(SBCOLS.find(c=>c.k==='unit')||{l:'Unit'}).l;
+const RLAB={BRK_LSE_NO:'Contract no.',TR_NUM:'Tract ID',CLIENT_UNIT:UNITL,ABSTRACT:'Abstract',ABSTRACT_NAME:'Abstract name',STATE:'State',TRACT_COUNTY:'County',TRACT_ACRES:'Tract ac',MIN_INT:'Min int',NET_AC:'Net ac',
+  ASSOCIATEID:'Owner ID',MINERAL_OWNER:'Mineral owner',ADDRESS:'Address',PHONE_NO:'Phone',HELD_BY:'Held by',LEASING_STATUS:'Landowner status',ORIGINAL_LESSOR:'Original lessor',LESSOR:'Lessor',CURRENT_LESSEE:'Current lessee',
+  CLIENT_LEASE_NO:'Client lease no.',SYMBOL:'Symbol',VOL_PAGE:'Vol/Page',EFFECTIVE_DATE:'Effective',EXPIRATION_DATE:'Expires',LSE_GROSS_AC:'Lease gross ac',LSE_NET_AC:'Lease net ac',BONUS_PER_AC:'Bonus/ac',ROYALTY:'Royalty',
+  TERM:'Term',OPTION_TERM:'Option term',OPTION_EXP_DATE:'Option expires',OPT_BONUS_PER_AC:'Option bonus/ac',BONUS_TOTAL:'Bonus total',OPT_BONUS_TOTAL:'Option bonus total',Breech_of_Contract:'Breach of contract'};
+const RNUM={TRACT_ACRES:3,MIN_INT:8,NET_AC:4,LSE_GROSS_AC:3,LSE_NET_AC:4,ROYALTY:4,BONUS_PER_AC:2,OPT_BONUS_PER_AC:2,BONUS_TOTAL:2,OPT_BONUS_TOTAL:2};
+const RDATE=new Set(['EFFECTIVE_DATE','EXPIRATION_DATE','OPTION_EXP_DATE']), RTAG=new Set(['MINERAL_OWNER','LESSOR','ORIGINAL_LESSOR']);
+const hum=s=>{ s=String(s).replace(/:+$/,'').replace(/_+/g,' ').trim(); return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase(); };
+DATA.forEach((r,i)=>{ const v=REC.v[i]; REC.cols.forEach((c,j)=>{ let x=REC.u[v[j]]; if(RTAG.has(c)&&x) x=untag(x); if(c==='CLIENT_UNIT') x=r.unitL; r['x'+j]=x; }); });
+const COLS=REC.cols.map((c,j)=>({k:'x'+j,src:c,l:RLAB[c]||hum(c),r:c in RNUM||c==='ASSOCIATEID'||c==='ABSTRACT',d:RNUM[c],
+  f:RDATE.has(c)?mdy:c==='CLIENT_UNIT'?bl:c==='LEASING_STATUS'?title:null,pill:c==='LEASING_STATUS',jump:c==='TR_NUM',net:c==='NET_AC',cls:c==='TR_NUM'?'id':c==='MINERAL_OWNER'?'own':''}));
+state.sort=(COLS.find(c=>c.src==='TR_NUM')||COLS[0]).k;
 let listRows=[];
 function renderList(){
   $('#llh').innerHTML='<tr>'+COLS.map(c=>`<th class="${c.r?'r':''}${state.sort===c.k?' sorted':''}" data-k="${c.k}" scope="col">${c.l}<span class="ar">${state.sort===c.k?(state.dir>0?'▲':'▼'):'↕'}</span></th>`).join('')+'</tr>';
@@ -70,10 +80,10 @@ function renderList(){
   if(!rows.length){ $('#llb').innerHTML=`<tr><td colspan="${COLS.length}" class="empty">No records match. Clear a filter or the search.</td></tr>`; return; }
   $('#llb').innerHTML=rows.map((r,i)=>`<tr tabindex="0" data-i="${i}">`+COLS.map(c=>{ let v=r[c.k];
     if(c.pill){ const g=gOf(r.g); return `<td><span class="spill"><i class="sw" style="background:var(${g.c})"></i>${g.label}</span></td>`; }
-    if(c.k==='cac'&&r.dup) return `<td class="r muted" title="Repeat of this owner's interest under another lease; counted once">${fmt(r.nac||0,4)}*</td>`;
+    if(c.net&&r.dup) return `<td class="r muted" title="Repeat of this owner's interest under another lease; counted once">${fmt(v||0,4)}*</td>`;
     if(v==null||v===''||v===BLANK) return `<td class="${c.r?'r ':''}muted">–</td>`;
     v=c.d!=null?fmt(v,c.d):c.f?c.f(v):v;
-    if(c.k==='id'||c.k==='tn') return `<td class="${c.cls||''}"><button type="button" class="jump" data-jump="${esc(r.id)}" data-tip="Show on plat map">${esc(v)}</button></td>`;
+    if(c.jump) return `<td class="${c.cls||''}"><button type="button" class="jump" data-jump="${esc(r.id)}" data-tip="Show on plat map">${esc(v)}</button></td>`;
     return `<td class="${c.r?'r ':''}${c.cls||''}"${c.cls==='own'?` title="${esc(v)}"`:''}>${esc(v)}</td>`; }).join('')+'</tr>').join('');
 }
 $('#llb').addEventListener('click',e=>{ const j=e.target.closest('[data-jump]'); if(j){ openTract(j.dataset.jump); return; } const tr=e.target.closest('tr[data-i]'); if(tr) openDrawer(listRows[+tr.dataset.i]); });
@@ -88,12 +98,10 @@ const xdate=v=>{ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v||''); return m?new D
 $('#copy').onclick=async()=>{
   const b=$('#copy'), old=b.textContent; b.disabled=true; b.textContent='Building…';
   try{
-    const XL=await loadExcelJS(), U=(COLS.find(c=>c.k==='unitL')||{l:'Unit'}).l;
-    const hasTn=Object.keys(TNUM).length>0, hasAbs=listRows.some(r=>r.abs!=null);
-    const C=[['Contract no.',r=>r.lno||null,14],['Tract ID',r=>r.id,18],[U,r=>r.unit?bl(r.unit):'Outside',16],hasTn&&['Plat tract',r=>r.tn||null,10],hasAbs&&['Abstract',r=>r.abs!=null?'A-'+r.abs:null,10],
-      ['Mineral owner',r=>r.owner,40],['Owner ID',r=>r.oid??null,11],['Address',r=>r.addr||null,40],['Phone',r=>r.phone||null,16],['Landowner status',r=>title(r.ls),15],
-      ['Mineral interest',r=>r.int??null,15,'0.000000'],['Tract acres',r=>r.tac??null,12,'#,##0.000'],['Net acres',r=>r.nac??null,12,'#,##0.0000'],['Net acres counted',r=>r.cac??0,15,'#,##0.0000'],
-      ['Current lessee',r=>r.lessee?title(r.lessee):null,30],['Effective',r=>xdate(r.eff),12,'mm/dd/yyyy'],['Expires',r=>xdate(r.exp),12,'mm/dd/yyyy']].filter(Boolean);
+    const XL=await loadExcelJS();
+    // same columns as Records, headed with the Mapper export field names; projects grouped by township export that grouping
+    const C=COLS.map(c=>[c.src==='CLIENT_UNIT'&&UNITL!=='Unit'?'TOWNSHIP_RANGE':c.src, RDATE.has(c.src)?(r=>xdate(r[c.k])):(r=>r[c.k]===''||r[c.k]===undefined?null:r[c.k]),
+      Math.min(40,Math.max(10,(c.src.length>24?14:c.src.length+3),/OWNER|LESSOR|ADDRESS|LESSEE|VOL_PAGE/.test(c.src)?34:0)), RDATE.has(c.src)?'mm/dd/yyyy':null]);
     const wb=new XL.Workbook(); wb.creator='PWE Dashboard'; wb.created=new Date();
     const ws=wb.addWorksheet('Records',{views:[{state:'frozen',ySplit:1}]});
     ws.addTable({name:'Records',ref:'A1',headerRow:true,style:{theme:'TableStyleMedium7',showRowStripes:true},

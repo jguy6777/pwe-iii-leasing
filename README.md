@@ -26,6 +26,7 @@ Rules for both: status = `LEASING_STATUS`, acres = `NET_AC`, each owner interest
 - `build_geo_simple.py <shp-stem> <data.json> <out.json>` – PWE IV tract shapefile → landing-page thumbnail shapes
 - `build_geo_ll.py <shp-stem> <epsg> <data.json> <out.json>` – tract shapefile → Leaflet map shapes in lat/long (NAD27 shifted with NOAA NADCON `us_noaa_conus.tif`; PWE III EPSG 32038, PWE IV EPSG 26781)
 - `strll4.json` – PWE IV section-township-range grid from SONRIS (DNRSvc/COMMON layers 3, 6, 7), pulled 10/15/2026
+- `build_rec.py <reference.xlsx> <current_export.xlsx> <data.json> <out.json>` – Records/export columns: the reference Mapper export (PWEIII 03.24.26) supplies only the column set and order; values come from the current export (contract no. first; columns a project's export lacks are left out)
 - `build_project.py <pwe3|pwe4> <out.html> --home` – one project page
 - `build_landing.py <out.html>` – landing page
 
