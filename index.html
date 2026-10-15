@@ -655,6 +655,8 @@ const SHP_IDS=new Set(GEO.t.map(t=>t.id));
 const MISSING=[...new Set(DATA.map(r=>r.id))].filter(id=>!SHP_IDS.has(id));
 const FULL=[0,0,GEO.w,GEO.h];
 const PL={vb:null,fitKey:null,tract:null,shade:'st'};
+// Clearing the selected tract zooms back out to the whole unit (or all units when none is picked).
+function unselectTract(){ PL.tract=null; render(); fitPlat(); }
 try{ const v=localStorage.getItem('pwe-shade'); if(v==='st'||v==='pct') PL.shade=v; }catch(e){}
 function unitBox(u){ const o=GEO.u.find(x=>!x.ctx&&x.u===u); if(o) return o.b; const ts=GEO.t.filter(t=>t.unit===u); if(!ts.length) return null;
   return [Math.min(...ts.map(t=>t.b[0])),Math.min(...ts.map(t=>t.b[1])),Math.max(...ts.map(t=>t.b[2])),Math.max(...ts.map(t=>t.b[3]))]; }
@@ -729,7 +731,7 @@ function renderSide(){
       <div class="lbl">Owners · net ac</div>
       <div class="olist">${own.map(r=>{ const g=gOf(r.g); return `<button type="button" class="orow" data-i="${r.i}"><i class="sw" style="background:var(${g.c})"></i><span class="on">${esc(r.owner)}<small>${r.lno?esc(r.lno)+' · ':''}${esc(bl(r.lesseeL))}</small></span><b>${fmt(r.dup?0:(r.cac||0),4)}</b></button>`; }).join('')}</div>
       <div class="acts"><button class="btn" type="button" id="ps-zoom" ${gt?'':'disabled'}>Zoom to tract</button><button class="btn pri" type="button" id="ps-ll">Open in Records</button></div>`;
-    $('#ps-back').onclick=()=>{ PL.tract=null; renderPlat(); };
+    $('#ps-back').onclick=()=>unselectTract();
     $('#ps-zoom').onclick=()=>zoomTract(t);
     $('#ps-ll').onclick=()=>{ state.q=t; $('#q').value=t; setTab('ll'); render(); };
     el.querySelectorAll('.orow').forEach(b=>b.onclick=()=>openDrawer(DATA[+b.dataset.i]));
@@ -752,7 +754,7 @@ $$('#pl-shade button').forEach(b=>b.onclick=()=>{ PL.shade=b.dataset.v; try{loca
   svg.addEventListener('pointerdown',e=>{ drag={x:e.clientX,y:e.clientY,vb:[...PL.vb],s:scale(),moved:false,t:e.target}; svg.setPointerCapture(e.pointerId); });
   svg.addEventListener('pointermove',e=>{ if(!drag) return; const dx=e.clientX-drag.x, dy=e.clientY-drag.y; if(!drag.moved&&Math.hypot(dx,dy)<4) return; drag.moved=true; hideTip(); svg.classList.add('panning'); setVB([drag.vb[0]-dx*drag.s,drag.vb[1]-dy*drag.s,drag.vb[2],drag.vb[3]]); });
   svg.addEventListener('pointerup',e=>{ if(!drag) return; const d=drag; drag=null; svg.classList.remove('panning');
-    if(!d.moved){ const p=d.t.closest&&d.t.closest('.tract'); if(p&&TSTAT[p.dataset.id]){ if(!state.unit&&p.dataset.u&&p.dataset.u!==OUT){ state.unit=p.dataset.u; PL.fitKey=null; } PL.tract=PL.tract===p.dataset.id?null:p.dataset.id; render(); } } });
+    if(!d.moved){ const p=d.t.closest&&d.t.closest('.tract'); if(p&&TSTAT[p.dataset.id]){ if(PL.tract===p.dataset.id){ unselectTract(); return; } if(!state.unit&&p.dataset.u&&p.dataset.u!==OUT){ state.unit=p.dataset.u; PL.fitKey=null; } PL.tract=p.dataset.id; render(); } else if(PL.tract) unselectTract(); } });
   $('#z-in').onclick=()=>zoom(1/1.4); $('#z-out').onclick=()=>zoom(1.4); $('#z-fit').onclick=()=>fitPlat();
 })();
 
@@ -811,7 +813,7 @@ function openDoc(u){ const d=PLATDOCS[u]; if(!d) return; DV.doc=u; $('#dv-title'
   im.alt=d.title; im.onload=()=>dvFit(false); $('#docv').hidden=false; if(im.getAttribute('src')!==d.src) im.src=d.src; else requestAnimationFrame(()=>dvFit(false)); $('#dv-close').focus(); }
 const closeDoc=()=>{ $('#docv').hidden=true; };
 $('#dv-close').onclick=closeDoc; $('#dv-fit').onclick=()=>dvFit(false); $('#dv-w').onclick=()=>dvFit(true); $('#dv-in').onclick=()=>dvZoom(1.25); $('#dv-out').onclick=()=>dvZoom(1/1.25);
-document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return; if(!$('#docv').hidden) closeDoc(); else closeDrawer(); });
+document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return; if(!$('#docv').hidden) closeDoc(); else if(!$('#drawer').hidden) closeDrawer(); else if(PL.tract) unselectTract(); });
 (function(){ const box=$('#dvb'); let dr=null;
   box.addEventListener('wheel',e=>{ e.preventDefault(); const b=box.getBoundingClientRect(); dvZoom(e.deltaY>0?1/1.15:1.15,e.clientX-b.left,e.clientY-b.top); },{passive:false});
   box.addEventListener('pointerdown',e=>{ dr={x:e.clientX,y:e.clientY,ox:DV.x,oy:DV.y}; box.setPointerCapture(e.pointerId); box.classList.add('panning'); });
