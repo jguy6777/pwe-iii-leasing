@@ -115,11 +115,12 @@ body{{margin:0;background:var(--bg);color:var(--text-hi);font:14px/1.45 var(--f-
 .upd{{font:500 10.5px var(--f-m);letter-spacing:.02em;color:var(--text-mid);margin-bottom:4px}}
 h1{{margin:0;font:600 22px/1.2 var(--f-d);letter-spacing:-.01em;color:var(--pine-ink)}}
 .sub{{font-size:13px;color:var(--text-mid);margin-top:3px}}
-.hside{{display:flex;align-items:center;gap:12px}}
+.hside{{display:flex;align-items:flex-end;gap:12px}}
 .hcol{{display:grid;justify-items:end;gap:8px}}
 .seglogo{{width:28px;height:28px;display:block;opacity:.95}}
 .datepill{{border:1px solid var(--border);background:var(--panel);border-radius:12px;padding:9px 16px;font:600 15px var(--f-d);white-space:nowrap}}
-.tbtn{{border:1px solid var(--border);background:var(--panel);color:var(--text-mid);border-radius:12px;padding:9px 12px;font:500 12px var(--f-b);cursor:pointer}}
+.tbtn{{border:1px solid var(--border);background:var(--panel);color:var(--text-mid);border-radius:12px;padding:9px 14px;font:600 15px var(--f-d);line-height:normal;cursor:pointer}}
+.datepill{{line-height:normal}}
 .tbtn:hover{{color:var(--text-hi);background:var(--panel-2)}}
 .grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:20px}}
 .card{{display:flex;flex-direction:column;gap:16px;background:var(--panel);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:22px 22px 18px;color:inherit;text-decoration:none;transition:border-color .15s,transform .15s}}
