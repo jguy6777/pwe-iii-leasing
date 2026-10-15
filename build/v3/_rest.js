@@ -1,50 +1,5 @@
 // dates arrive as YYYY-MM-DD; show mm/dd/yyyy, sort on the stored value
 const mdy=v=>{ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v||''); return m?`${m[2]}/${m[3]}/${m[1]}`:(v||''); };
-// ---------- plat map ----------
-GEO.t.forEach(t=>{ t.st=TSTAT[t.id]?TSTAT[t.id].s:'X'; t.unit=TSTAT[t.id]?TSTAT[t.id].unit:null; });
-const SHP_IDS=new Set(GEO.t.map(t=>t.id));
-const MISSING=[...new Set(DATA.map(r=>r.id))].filter(id=>!SHP_IDS.has(id));
-const FULL=[0,0,GEO.w,GEO.h];
-const PL={vb:null,fitKey:null,tract:null,shade:'st'};
-// Clearing the selected tract zooms back out to the whole unit (or all units when none is picked).
-function unselectTract(){ PL.tract=null; render(); fitPlat(); }
-try{ const v=localStorage.getItem('pwe-shade'); if(v==='st'||v==='pct') PL.shade=v; }catch(e){}
-function unitBox(u){ const o=GEO.u.find(x=>!x.ctx&&x.u===u); if(o) return o.b; const ts=GEO.t.filter(t=>t.unit===u); if(!ts.length) return null;
-  return [Math.min(...ts.map(t=>t.b[0])),Math.min(...ts.map(t=>t.b[1])),Math.max(...ts.map(t=>t.b[2])),Math.max(...ts.map(t=>t.b[3]))]; }
-const boxVB=(b,pad=.08)=>{ const w=b[2]-b[0],h=b[3]-b[1],p=Math.max(w,h)*pad; return [b[0]-p,b[1]-p,w+2*p,h+2*p]; };
-const pctFill=p=>`color-mix(in srgb,var(--s-acq) ${Math.round(p*100)}%,var(--s-work))`;
-function tractFill(t,id){ if(PL.shade==='pct'&&TSTAT[t.id]&&TSTAT[t.id].t>0) return pctFill(TSTAT[t.id].p); return PST[t.st].fill.replace('PAT','PAT-'+id); }
-function patDefs(id){ const s=id==='k'?360:120; return `<defs><pattern id="PAT-${id}" patternUnits="userSpaceOnUse" width="${s}" height="${s}" patternTransform="rotate(45)"><rect width="${s}" height="${s}" fill="var(--s-acq)"/><rect width="${s*.43}" height="${s}" fill="var(--s-work)"/></pattern></defs>`; }
-function platMarkup(id){
-  const match=new Set(filtered({noUnit:true}).map(r=>r.id)), anyF=['ls','lessee','form','abs'].some(k=>state[k]);
-  let h=patDefs(id)+'<g class="tracts">';
-  GEO.t.forEach(t=>{ const inUnit=!state.unit||t.unit===state.unit, hit=t.st==='X'||!anyF||match.has(t.id), S=TSTAT[t.id];
-    const tp=S?`<b>${t.ut?'Tract '+esc(t.ut)+' · ':''}${esc(ushort(S.unit))}</b><br>${esc(t.id)}<br>${PST[t.st].label} · ${fmt(S.p*100,1)}% leased<br>${fmt(S.l,2)} of ${fmt(S.t,2)} net ac leased`:`<b>${esc(t.id)}</b><br>${esc(t.su?title(t.su)+' · not in this export':'Not in this export')}`;
-    const cls=['tract',t.st==='X'?'ctx':'',(!inUnit||!hit)?'dim':'',PL.tract===t.id&&id==='p'?'sel':''].filter(Boolean).join(' ');
-    h+=`<path class="${cls}" d="${t.d}" fill="${tractFill(t,id)}" data-id="${esc(t.id)}" data-u="${esc(t.unit||'')}" data-tip="${esc(tp)}"/>`; });
-  if(id==='p'&&PL.tract) GEO.t.forEach(t=>{ if(t.id===PL.tract) h+=`<path class="selhalo" d="${t.d}"/><path class="selline" d="${t.d}"/>`; });
-  h+='</g><g class="ulines">'+GEO.u.map(u=>`<path class="uline${u.ctx?' ctx':''}${state.unit&&!u.ctx&&u.u!==state.unit?' faint':''}${state.unit&&u.u===state.unit&&id==='k'?' hl':''}" d="${u.d}" data-u="${esc(u.ctx?'':u.u)}"/>`).join('')+'</g><g class="labels"></g>';
-  return h; }
-function drawLabels(svg,vb,mode){ const g=svg.querySelector('.labels'); if(!g) return;
-  const zoomed=vb[2]<GEO.w*.45, fs=vb[2]/(mode==='key'?26:38); let h='';
-  if(mode!=='key'&&zoomed){ GEO.t.forEach(t=>{ if(!t.ut||(state.unit&&t.unit!==state.unit)) return; if(t.l[0]<vb[0]||t.l[0]>vb[0]+vb[2]||t.l[1]<vb[1]||t.l[1]>vb[1]+vb[3]) return;
-      h+=`<text x="${t.l[0]}" y="${t.l[1]}" style="font-size:${fs*.8}px;stroke-width:${fs*.22}px">${esc(t.ut)}</text>`; }); }
-  if(!zoomed||mode==='key'){ GEO.u.forEach(u=>{ if(u.ctx&&GEO.u.some(v=>!v.ctx&&ushort(v.u).toUpperCase()===u.u.toUpperCase())) return; h+=`<text class="ul${u.ctx?' ctx':''}" x="${u.l[0]}" y="${u.l[1]}" style="font-size:${fs}px;stroke-width:${fs*.25}px">${esc(u.ctx?title(u.u):ushort(u.u))}</text>`; }); }
-  g.innerHTML=h; }
-function legendHtml(){ if(PL.shade==='pct') return `<span><i class="lg" style="background:var(--s-work)"></i>0%</span><span class="grad"></span><span><i class="lg" style="background:var(--s-acq)"></i>100% leased</span><span><i class="lg" style="background:var(--p-none)"></i>No net interest</span><span><i class="lg ctx"></i>Not in export</span>`;
-  return ['L','P','U','Z','X'].map(k=>`<span><i class="lg ${k==='P'?'part':k==='X'?'ctx':''}" style="${k==='P'||k==='X'?'':'background:'+PST[k].fill}"></i>${PST[k].label}</span>`).join(''); }
-function renderKey(){ const svg=$('#keymap'); svg.setAttribute('viewBox',boxVB(FULL,.03).join(' ')); svg.setAttribute('preserveAspectRatio','xMidYMid meet');
-  svg.innerHTML=platMarkup('k'); drawLabels(svg,FULL,'key');
-  $('#key-leg').innerHTML=['L','P','U','X'].map(k=>`<span><i class="lg ${k==='P'?'part':k==='X'?'ctx':''}" style="${k==='P'||k==='X'?'':'background:'+PST[k].fill}"></i>${PST[k].label}</span>`).join('');
-  $('#key-foot').textContent='Grey dashed outlines are parcels in the parcel file that are not in this export.';
-  svg.querySelectorAll('.tract,.uline').forEach(p=>p.onclick=()=>{ const u=p.dataset.u; if(!u||u===OUT) return; setUnit(u); setTab('un'); }); }
-
-function setVB(vb){ PL.vb=vb; const svg=$('#plat'); svg.setAttribute('viewBox',vb.join(' ')); drawLabels(svg,vb,'plat'); }
-function fitPlat(){ const b=state.unit&&state.unit!==OUT?unitBox(state.unit):null; setVB(boxVB(b||FULL,b?.1:.03)); PL.fitKey=state.unit; }
-// center on a tract, framed with a margin around all of its parcel pieces (never wider than half the unit view)
-function tractBox(id){ const ps=GEO.t.filter(x=>x.id===id); if(!ps.length) return null; return [Math.min(...ps.map(p=>p.b[0])),Math.min(...ps.map(p=>p.b[1])),Math.max(...ps.map(p=>p.b[2])),Math.max(...ps.map(p=>p.b[3]))]; }
-function zoomTract(id){ const b=tractBox(id); if(!b) return; const w=b[2]-b[0], h=b[3]-b[1], side=Math.max(w,h,GEO.w/45)*1.6, cx=(b[0]+b[2])/2, cy=(b[1]+b[3])/2;
-  setVB([cx-side/2,cy-side/2,side,side]); }
 function renderUnitHead(){
   const u=state.unit, rr=filtered(), p=pctOf(rr), base=filtered({noLs:true}), pb=pctOf(base), doc=PLATDOCS[u], i=UNITS.indexOf(u);
   const meta=u?(doc?`Survey plat ${doc.short} · called ${fmt(PLATCALL[u],3)} ac`:PLATCALL[u]?`${PLATNOTE[u]||'Plat not attached'} · called ${fmt(PLATCALL[u],3)} ac`:u===OUT?'Tracts outside the gas units':`${fmt(tracts(rr))} tracts · no survey plat yet`):`${UNITS.filter(x=>x!==OUT).length} units · pick one from the list or the map`;
@@ -61,11 +16,11 @@ function renderPlat(){
   if(PL.tract&&state.unit&&TSTAT[PL.tract]&&TSTAT[PL.tract].unit!==state.unit) PL.tract=null;
   renderUnitHead();
   if($('#pane-un').hidden) return;
-  const svg=$('#plat');
+  initPlat(); MP.invalidateSize();
   $$('#pl-shade button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===PL.shade));
-  svg.setAttribute('preserveAspectRatio','xMidYMid meet');
-  svg.innerHTML=platMarkup('p');
-  if(PL.fitKey!==state.unit||!PL.vb) fitPlat(); else setVB(PL.vb);
+  $$('#z-base button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.b===PL.base));
+  if(PL.fitKey!==state.unit) fitPlat();
+  setBase(MP); drawMap(MP);
   $('#pl-leg').innerHTML=legendHtml();
   const miss=MISSING.filter(id=>!state.unit||TSTAT[id].unit===state.unit);
   $('#pl-foot').textContent=(state.unit===OUT?'Outside tracts sit around the units, so the whole parcel map is shown. ':'')+(miss.length?`${fmt(miss.length)} tract${miss.length>1?'s':''} in this view have no parcel shape (${fmt(miss.reduce((a,id)=>a+TSTAT[id].t,0),2)} net ac); they still count in every total.`:'Every tract in this view has a parcel shape.');
@@ -97,17 +52,6 @@ function renderSide(){
   el.querySelectorAll('.orow').forEach(b=>b.onclick=()=>{ PL.tract=b.dataset.t; renderPlat(); zoomTract(b.dataset.t); if(typeof showMap==='function') showMap(); });
 }
 $$('#pl-shade button').forEach(b=>b.onclick=()=>{ PL.shade=b.dataset.v; try{localStorage.setItem('pwe-shade',PL.shade)}catch(e){} renderPlat(); });
-(function(){ const svg=$('#plat'); let drag=null;
-  const scale=()=>{ const r=svg.getBoundingClientRect(); return Math.max(PL.vb[2]/r.width,PL.vb[3]/r.height); };
-  const toSvg=e=>{ const r=svg.getBoundingClientRect(), s=scale(); return [PL.vb[0]+PL.vb[2]/2+(e.clientX-r.left-r.width/2)*s, PL.vb[1]+PL.vb[3]/2+(e.clientY-r.top-r.height/2)*s]; };
-  const zoom=(k,c)=>{ const [x,y,w,h]=PL.vb; const nw=w*k, minW=GEO.w/60,maxW=GEO.w*1.6; if(nw<minW) k=minW/w; if(nw>maxW) k=maxW/w; const [cx,cy]=c||[x+w/2,y+h/2]; setVB([cx-(cx-x)*k,cy-(cy-y)*k,w*k,h*k]); };
-  svg.addEventListener('wheel',e=>{ e.preventDefault(); zoom(e.deltaY>0?1.2:1/1.2,toSvg(e)); },{passive:false});
-  svg.addEventListener('pointerdown',e=>{ drag={x:e.clientX,y:e.clientY,vb:[...PL.vb],s:scale(),moved:false,t:e.target}; svg.setPointerCapture(e.pointerId); });
-  svg.addEventListener('pointermove',e=>{ if(!drag) return; const dx=e.clientX-drag.x, dy=e.clientY-drag.y; if(!drag.moved&&Math.hypot(dx,dy)<4) return; drag.moved=true; hideTip(); svg.classList.add('panning'); setVB([drag.vb[0]-dx*drag.s,drag.vb[1]-dy*drag.s,drag.vb[2],drag.vb[3]]); });
-  svg.addEventListener('pointerup',e=>{ if(!drag) return; const d=drag; drag=null; svg.classList.remove('panning');
-    if(!d.moved){ const p=d.t.closest&&d.t.closest('.tract'); if(p&&TSTAT[p.dataset.id]){ if(PL.tract===p.dataset.id){ unselectTract(); return; } if(!state.unit&&p.dataset.u&&p.dataset.u!==OUT){ state.unit=p.dataset.u; PL.fitKey=null; } PL.tract=p.dataset.id; render(); } else if(PL.tract) unselectTract(); } });
-  $('#z-in').onclick=()=>zoom(1/1.4); $('#z-out').onclick=()=>zoom(1.4); $('#z-fit').onclick=()=>fitPlat();
-})();
 
 // ---------- records ----------
 const COLS=[{k:'id',l:'Tract ID',cls:'id'},{k:'unitL',l:'Unit',f:ushort},{k:'tn',l:'Plat tract'},{k:'owner',l:'Mineral owner',cls:'own'},{k:'ls',l:'Landowner status',pill:1},

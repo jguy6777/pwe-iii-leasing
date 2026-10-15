@@ -1,6 +1,7 @@
 <title>%%CODE%% Leasing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>/*__LEAFLETCSS__*/</style>
 <style>
 /* Layout: EPPS-style console; light theme in earth tones (sand, umber, moss, ochre), dark theme in deep pine. Left icon rail (views + theme), header with logo, filter row.
    Overview = three columns (unit bars + lessees | KPI tiles + key map | leased gauge, tract donut, changes), then unit table and open-acreage worklist. */
@@ -238,10 +239,33 @@ td.r{font-family:var(--f-m);font-size:12px}
 .stat span.u{font:500 11.5px var(--f-b);color:var(--text-lo);margin-left:3px}
 .platgrid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px;align-items:start}
 .pbox{position:relative;margin:0 14px 14px;border-radius:12px;background:var(--panel-2);border:1px solid var(--border-soft);height:min(72vh,780px);min-height:440px;overflow:hidden}
-.plat-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-#keymap .tract,#keymap .uline{cursor:pointer}
-#plat{cursor:grab;touch-action:none}
-#plat.panning{cursor:grabbing}
+/* Leaflet maps */
+.lmap{position:absolute;inset:0;background:var(--panel-2)}
+.leaflet-container{font-family:var(--f-b);background:var(--panel-2)}
+.leaflet-control-attribution{font-size:10px;background:color-mix(in srgb,var(--panel) 82%,transparent)!important;color:var(--text-lo)!important;border-radius:6px 0 0 0}
+.leaflet-control-attribution a{color:var(--text-mid)!important}
+#keymap .tract{cursor:pointer}
+.sat .tract{stroke:rgba(255,255,255,.78)}
+.sat .tract.ctx{stroke:rgba(255,255,255,.6)}
+.sat .uline{stroke:#fff}
+.sat .uline.ctx{stroke:rgba(255,255,255,.7)}
+.mlab{width:0!important;height:0!important}
+.mlab span{position:absolute;left:0;top:0;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;color:var(--text-hi);text-shadow:0 0 2px var(--panel-2),0 0 2px var(--panel-2),0 0 4px var(--panel-2)}
+.mlab.ul span{font:700 14px var(--f-d)}
+.mlab.ul.k span{font-size:12.5px}
+.mlab.ul.ctx span{color:var(--text-lo);font-weight:600}
+.mlab.tn span{font:600 11px var(--f-m)}
+.mlab.sec span{font:600 11px var(--f-m);color:var(--text-mid)}
+.sat .mlab span{color:#fff;text-shadow:0 0 2px #000,0 0 3px #000,0 0 5px rgba(0,0,0,.6)}
+.sat .mlab.sec span{color:#FFE7A0}
+.strl{stroke:var(--text-lo);stroke-opacity:.6;fill:none}
+.strt{stroke:var(--text-mid);stroke-opacity:.85;fill:none}
+.sat .strl{stroke:#FFE7A0;stroke-opacity:.55}
+.sat .strt{stroke:#FFD45A;stroke-opacity:.9}
+.lg.strk{background:none;border-top:2px solid var(--text-mid);border-radius:0;height:0;width:14px}
+.bctl{position:absolute;top:10px;left:10px;display:flex;gap:6px;z-index:1000}
+.bctl .seg{background:var(--panel)}
+.zctl,.leg{z-index:1000}
 .tract{stroke:var(--pline);stroke-width:.8px;vector-effect:non-scaling-stroke;transition:opacity .15s}
 .tract.ctx{stroke-dasharray:3 3}
 .tract:hover{stroke:var(--text-hi);stroke-width:2px}
@@ -382,7 +406,7 @@ td.r{font-family:var(--f-m);font-size:12px}
           <div class="c mapc">
             <div class="ch"><div><h2>Unit map</h2><div class="sub">Tracts by lease status · click a unit to open its plat</div></div>
               <div class="qwrap"><input type="search" id="mapq" list="tractlist" placeholder="Find a tract or owner…" title="Type a tract (e.g. Davis 15), tract ID or owner name" aria-label="Find a tract or owner"><span class="qmsg" id="mapq-msg" role="status"></span></div></div>
-            <div class="keybox"><svg id="keymap" class="plat-svg" role="img" aria-label="Map of %%CODE%% units"></svg><div class="leg" id="key-leg"></div></div>
+            <div class="keybox"><div id="keymap" class="lmap" role="img" aria-label="Map of %%CODE%% units"></div><div class="leg" id="key-leg"></div></div>
             <div class="mapfoot" id="key-foot"></div>
           </div>
         </div>
@@ -416,7 +440,8 @@ td.r{font-family:var(--f-m);font-size:12px}
           <div class="ch"><div><h2>Plat map</h2><div class="sub">Drag to pan · scroll or + / − to zoom · click a tract for owners and leases</div></div>
             <div class="qwrap"><input type="search" id="platq" list="tractlist" placeholder="Go to tract or owner…" aria-label="Go to a tract or owner"><span class="qmsg" id="platq-msg" role="status"></span></div><div class="seg" id="pl-shade" role="group" aria-label="Shade tracts by"><button data-v="st">Lease status</button><button data-v="pct">% leased</button></div></div>
           <div class="pbox">
-            <svg id="plat" class="plat-svg" role="img" aria-label="Unit plat map"></svg>
+            <div id="plat" class="lmap" role="application" aria-label="Unit plat map"></div>
+            <div class="bctl"><div class="seg" id="z-base" role="group" aria-label="Basemap"><button type="button" data-b="sat">Aerial</button><button type="button" data-b="map">Map</button></div><div class="seg" hidden><button type="button" id="z-grid" aria-pressed="true">STR grid</button></div></div>
             <div class="zctl"><button class="ibtn" type="button" id="z-in" aria-label="Zoom in">+</button><button class="ibtn" type="button" id="z-out" aria-label="Zoom out">−</button><button class="ibtn" type="button" id="z-fit" aria-label="Fit to unit">⤢</button></div>
             <div class="leg" id="pl-leg"></div>
           </div>
@@ -455,9 +480,11 @@ td.r{font-family:var(--f-m);font-size:12px}
   <div class="db" id="d-body"></div>
 </aside>
 
+<script>/*__LEAFLETJS__*/</script>
 <script>
 const DATA = /*__DATA__*/[];
 const GEO = /*__GEO__*/{};
+const STR = /*__STR__*/null; // section-township-range grid (PWE IV, from SONRIS); null when not used
 const EXPORT_DATE='Oct 14, 2026';
 /*__PREP__*/
 // ---------- overview ----------
@@ -530,6 +557,7 @@ function renderLists(){
 /*__GOAL__*/
 
 /*__NOTES__*/
+/*__MAP__*/
 /*__REST__*/
 // ---------- map search + tract jump ----------
 // bring the plat map on screen so the zoomed tract is visible, not just the unit header
@@ -541,7 +569,7 @@ const tlabel=x=>`${ushort(x.u)}${x.tn?' · Tract '+x.tn:''} · ${x.id}`;
 $('#tractlist').innerHTML=TLIST.map(x=>`<option value="${esc(tlabel(x))}"></option>`).join('');
 // resolve a typed value to a tract: tract ID, "unit + plat tract no.", plat tract no. within the open unit, or an owner name
 function resolveQuery(raw){ const q=raw.trim().toLowerCase(); if(!q) return null;
-  const idm=q.match(/tx\d{3}-\d{4}-\d{3}/); if(idm){ const t=TLIST.find(x=>x.id.toLowerCase()===idm[0]); if(t) return {id:t.id}; }
+  const idm=q.match(/tx\d{3}-\d{4}-\d{3}|la\d{3}-\d{6}-\d{4}/); if(idm){ const t=TLIST.find(x=>x.id.toLowerCase()===idm[0]); if(t) return {id:t.id}; }
   if(/^\d{3,4}-\d{3}$|^\d{4}-\d{3}$/.test(q)){ const t=TLIST.filter(x=>x.id.toLowerCase().endsWith(q)); if(t.length===1) return {id:t[0].id}; }
   const m=q.replace(/\btract\b|·/g,' ').replace(/\s+/g,' ').trim().match(/^(.*?)\s*([0-9]+[a-z]?)$/i);
   if(m){ const un=m[1].trim(), num=m[2].toLowerCase();
