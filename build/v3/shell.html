@@ -1,0 +1,602 @@
+<title>%%CODE%% Leasing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: EPPS-style console; light theme in earth tones (sand, umber, moss, ochre), dark theme in deep pine. Left icon rail (views + theme), header with logo, filter row.
+   Overview = three columns (unit bars + lessees | KPI tiles + key map | leased gauge, tract donut, changes), then unit table and open-acreage worklist. */
+:root{
+  --bg:#EFE8DC; --panel:#FBF8F2; --panel-2:#F3ECE0; --border:#DACDB8; --border-soft:#E7DECF;
+  --text-hi:#2B2419; --text-mid:#5B5040; --text-lo:#76695A;
+  --pine:#2F4A35; --pine-ink:#2F4A35; --nav-on:#3B5638; --nav-on-fg:#FBF8F2;
+  --wave:#8A5526; --wave-soft:rgba(138,85,38,.10); --ring:rgba(138,85,38,.38);
+  --leased:#108060; --unleased:#B87A22; --none:#D3C7B4; --ctx:rgba(118,105,90,.12); --track:#E6DCCB;
+  --up:#108060; --down:#A3462F; --line:#E7DECF; --pline:rgba(43,36,25,.35); --puline:#2F4A35;
+  --tip-bg:#2B2419; --tip-fg:#F6F1E8; --scrim:rgba(43,36,25,.35); --shadow:0 1px 2px rgba(60,45,25,.07),0 4px 14px rgba(60,45,25,.06);
+  --f-d:"Space Grotesk",ui-sans-serif,system-ui,sans-serif; --f-b:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; --f-m:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  /* aliases used by the map + records code */
+  --s-acq:var(--leased); --s-work:var(--unleased); --p-none:var(--none); --p-ctx:var(--ctx); --p-line:var(--pline); --p-uline:var(--puline);
+  --fg:var(--text-hi); --fg-2:var(--text-mid); --fg-3:var(--text-lo); --surf:var(--panel); --surf-2:var(--panel-2); --accent:var(--wave); --accent-ink:var(--wave); --accent-soft:var(--wave-soft);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B1613; --panel:#11201C; --panel-2:#0E1B18; --border:#22362F; --border-soft:#1A2B26;
+  --text-hi:#E6F0EC; --text-mid:#9FB4AC; --text-lo:#71877F;
+  --pine-ink:#8FD0B2; --nav-on:#1E6B4F; --nav-on-fg:#F2FAF6;
+  --wave:#5AA9E0; --wave-soft:rgba(90,169,224,.12); --ring:rgba(90,169,224,.45);
+  --leased:#2FA474; --unleased:#B88A2E; --none:#34453F; --ctx:rgba(159,180,172,.06); --track:#1B2C27;
+  --up:#5CC596; --down:#E0899A; --line:#1E302A; --pline:rgba(230,240,236,.28); --puline:#E6F0EC;
+  --tip-bg:#E6F0EC; --tip-fg:#0B1613; --scrim:rgba(0,0,0,.55); --shadow:0 1px 2px rgba(0,0,0,.3);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1613; --panel:#11201C; --panel-2:#0E1B18; --border:#22362F; --border-soft:#1A2B26;
+  --text-hi:#E6F0EC; --text-mid:#9FB4AC; --text-lo:#71877F;
+  --pine-ink:#8FD0B2; --nav-on:#1E6B4F; --nav-on-fg:#F2FAF6;
+  --wave:#5AA9E0; --wave-soft:rgba(90,169,224,.12); --ring:rgba(90,169,224,.45);
+  --leased:#2FA474; --unleased:#B88A2E; --none:#34453F; --ctx:rgba(159,180,172,.06); --track:#1B2C27;
+  --up:#5CC596; --down:#E0899A; --line:#1E302A; --pline:rgba(230,240,236,.28); --puline:#E6F0EC;
+  --tip-bg:#E6F0EC; --tip-fg:#0B1613; --scrim:rgba(0,0,0,.55); --shadow:0 1px 2px rgba(0,0,0,.3);
+  color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--text-hi);font:14px/1.45 var(--f-b);font-variant-numeric:tabular-nums}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--wave);outline-offset:2px}
+.muted{color:var(--text-lo)}
+.num{font-family:var(--f-m)}
+
+/* frame: left rail + main */
+.frame{display:grid;grid-template-columns:84px minmax(0,1fr);gap:22px;max-width:1880px;margin:0 auto;padding:20px 24px 48px 16px}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 20px);align-self:start;display:grid;gap:8px;padding:10px;border-radius:16px;background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow)}
+.nav{border:0;background:transparent;border-radius:12px;padding:10px 4px 8px;display:grid;justify-items:center;gap:4px;cursor:pointer;color:var(--text-mid);font-size:11px;font-weight:500;line-height:1.2;text-align:center}
+.nav svg{width:20px;height:20px}
+.nav small{font:500 10px var(--f-m);color:var(--text-lo)}
+.nav:hover{background:var(--panel-2);color:var(--text-hi)}
+.nav[aria-selected="true"]{background:var(--nav-on);color:var(--nav-on-fg)}
+.nav[aria-selected="true"] small{color:inherit;opacity:.8}
+.rail hr{border:0;border-top:1px solid var(--border-soft);margin:4px 2px;width:auto}
+.main{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;min-width:0}
+.main>*{min-width:0}
+
+/* header */
+.head{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:16px}
+.brand{display:flex;align-items:center;gap:18px;flex-wrap:wrap;min-width:0}
+.logo{height:62px;width:auto;max-width:100%;border-radius:10px;background:#fff;padding:4px 8px;border:1px solid var(--border-soft)}
+.upd{font:500 10.5px var(--f-m);letter-spacing:.02em;color:var(--text-mid);margin-bottom:4px}
+.homelink{display:inline-block;font:600 12px var(--f-b);color:var(--wave);text-decoration:none;margin-bottom:6px}
+.homelink:hover{text-decoration:underline}
+.head h1{margin:0;font:600 22px/1.2 var(--f-d);letter-spacing:-.01em;color:var(--pine-ink)}
+.head .sub{font-size:13px;color:var(--text-mid);margin-top:3px}
+.hside{display:grid;justify-items:end;gap:8px}
+.seglogo{width:28px;height:28px;display:block;opacity:.95}
+.datepill{border:1px solid var(--border);background:var(--panel);border-radius:12px;padding:9px 16px;font:600 15px var(--f-d);white-space:nowrap}
+
+/* filters */
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar select{appearance:none;border:1px solid var(--border);background:var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2376695A' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 11px center;border-radius:10px;padding:9px 30px 9px 12px;font-size:13px;font-weight:500;max-width:240px;min-width:0;cursor:pointer}
+.bar select:hover{border-color:var(--wave)}
+.bar select.unitsel{font-weight:600;color:var(--pine-ink);max-width:300px}
+.btn{border:1px solid var(--border);border-radius:10px;padding:8px 13px;background:var(--panel);cursor:pointer;font-weight:600;font-size:12.5px;color:var(--text-mid);display:inline-flex;align-items:center;gap:7px;transition:border-color .15s,color .15s,box-shadow .15s}
+.btn:hover{color:var(--text-hi);border-color:var(--wave);box-shadow:0 0 0 3px var(--wave-soft)}
+.btn.pri{background:var(--nav-on);border-color:var(--nav-on);color:var(--nav-on-fg)}
+.btn.pri:hover{color:var(--nav-on-fg)}
+.btn svg{width:15px;height:15px}
+.btn[disabled]{opacity:.45;cursor:not-allowed;box-shadow:none}
+.ibtn{border:1px solid var(--border);width:36px;height:36px;border-radius:10px;background:var(--panel);cursor:pointer;display:grid;place-items:center;color:var(--text-mid);font:600 17px var(--f-d)}
+.ibtn:hover{color:var(--text-hi);border-color:var(--wave)}
+.ibtn[disabled]{opacity:.4;cursor:default}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips:empty{display:none}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 4px 3px 11px;border-radius:999px;background:var(--wave-soft);color:var(--wave);font-size:12px;font-weight:600}
+.chip button{border:0;background:transparent;cursor:pointer;font-size:15px;line-height:1;padding:0 6px;color:inherit}
+
+/* cards */
+.c{background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:16px 18px;min-width:0}
+.ch{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
+.ch h2{margin:0;font:600 16px var(--f-d);color:var(--text-hi)}
+.ch .sub{font-size:12px;color:var(--text-lo);margin-top:2px}
+.lbl{font:500 10.5px var(--f-m);letter-spacing:.08em;text-transform:uppercase;color:var(--text-lo)}
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:999px;border:1px solid var(--border);background:var(--panel-2)}
+.seg button{border:0;background:transparent;border-radius:999px;padding:4px 11px;font-size:11.5px;font-weight:600;color:var(--text-mid);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--nav-on);color:var(--nav-on-fg)}
+.sw{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none}
+.part{background:repeating-linear-gradient(45deg,var(--leased) 0 3px,var(--unleased) 3px 6px)}
+.empty{color:var(--text-lo);font-size:13px;padding:8px 2px}
+.up{color:var(--up);font-weight:600}
+.note{margin:0;font-size:12px;color:var(--text-lo)}
+
+/* overview grid */
+.ovgrid{display:grid;grid-template-columns:minmax(290px,1fr) minmax(0,2fr) minmax(290px,1fr);gap:18px;align-items:start}
+.col{display:grid;gap:18px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kpi{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:center;text-align:left;width:100%;font:inherit;color:inherit;padding:10px 12px}
+.kpi>div{min-width:0}
+button.kpi{cursor:pointer}
+button.kpi:hover{border-color:var(--wave);box-shadow:var(--shadow),0 0 0 3px var(--wave-soft)}
+button.kpi.on{border-color:var(--wave);box-shadow:0 0 0 2px var(--ring)}
+.kic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--panel-2);border:1px solid var(--border);color:var(--pine-ink)}
+.kic svg{width:16px;height:16px}
+.kpi .k{font-size:11.5px;color:var(--text-mid);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .v{font:700 clamp(14px,1.02vw,19px)/1.2 var(--f-m);letter-spacing:-.02em;white-space:nowrap}
+.kpi .v small{margin-left:2px}
+.kpi .v small{font:500 11px var(--f-b);color:var(--text-lo);margin-left:3px}
+.kpi .d{font-size:11px;color:var(--wave);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .d.g{color:var(--up)}
+.kpi .d.m{color:var(--text-lo)}
+
+/* unit bars (left) */
+.ubars{display:grid;gap:4px}
+.ubar{border:0;background:transparent;text-align:left;width:100%;cursor:pointer;border-radius:10px;padding:8px 8px;display:grid;gap:6px}
+.ubar:hover{background:var(--panel-2)}
+.ubar.on{background:var(--wave-soft)}
+.ubar.dim{opacity:.45}
+.ubar .t{display:flex;align-items:baseline;gap:8px;font-size:13px}
+.ubar .t .n{font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ubar .t .dl{font:500 11px var(--f-m)}
+.ubar .t .v{font:700 13px var(--f-m)}
+.ubar .t .p{font:500 11px var(--f-m);color:var(--text-lo);min-width:44px;text-align:right}
+.bt{height:8px;border-radius:999px;background:var(--track);display:flex;gap:2px;overflow:hidden}
+.bt i{display:block;height:100%;border-radius:999px}
+.blegend{display:flex;gap:14px;font-size:11.5px;color:var(--text-mid);margin:-4px 0 6px 8px}
+.blegend span{display:inline-flex;align-items:center;gap:6px}
+
+/* gauge + donut */
+.gauge{display:flex;gap:18px;align-items:center}
+.gauge svg{width:132px;height:132px;flex:none}
+.gtx{display:grid;gap:10px;font-size:12.5px;color:var(--text-mid)}
+.gtx b{display:block;font:700 19px var(--f-m);color:var(--text-hi)}
+.donut{display:flex;gap:16px;align-items:center}
+.donut svg{width:126px;height:126px;flex:none}
+.dleg{display:grid;gap:9px;flex:1;min-width:0;font-size:13px}
+.dleg div{display:flex;align-items:center;gap:8px}
+.dleg div span{flex:1}
+.dleg b{font:700 13px var(--f-m)}
+
+/* changes */
+.chg{display:grid;gap:10px;font-size:12.5px}
+.chg .it{position:relative;border:1px solid var(--border);border-left:3px solid var(--wave);border-radius:10px;padding:10px 12px;background:var(--panel-2)}
+.chg .badge{display:inline-flex;align-items:center;gap:5px;font:500 9.5px var(--f-m);letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--nav-on);color:var(--nav-on-fg);margin-bottom:6px}
+.chg .it.g{border-left-color:var(--leased)}
+.chg .it b{display:block;font-weight:600;font-size:13px}
+.chg .it span{color:var(--text-mid)}
+.chg .it span.badge{color:var(--nav-on-fg)}
+
+/* key map */
+.mapc{padding:0;overflow:hidden;display:flex;flex-direction:column}
+.mapc>.ch{padding:16px 18px 0;margin-bottom:10px}
+.keybox{position:relative;margin:0 14px 12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--border-soft);height:560px;overflow:hidden}
+.mapfoot{font-size:11.5px;color:var(--text-lo);padding:0 18px 14px}
+#mapq,#platq{border:1px solid var(--border);background:var(--panel-2);border-radius:10px;padding:8px 12px;font-size:13px;width:min(300px,100%)}
+#platq{width:min(240px,100%)}
+.qwrap{display:grid;gap:3px;min-width:0}
+.qmsg{font-size:11.5px;color:var(--down);min-height:0}
+.qmsg:empty{display:none}
+.jump{border:0;background:none;padding:0;font:inherit;color:var(--wave);cursor:pointer;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px}
+.jump:hover{text-decoration-color:currentColor}
+.mapc>.ch .qwrap+.seg{margin-left:8px}
+
+/* lower row */
+.lower{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+.work2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
+.tblwrap{overflow:auto;border-radius:10px;border:1px solid var(--border-soft)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:9px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{position:sticky;top:0;background:var(--panel-2);color:var(--text-lo);font:500 10.5px var(--f-m);letter-spacing:.07em;text-transform:uppercase;z-index:1}
+th.r,td.r{text-align:right}
+td.r{font-family:var(--f-m);font-size:12px}
+#sb th[data-k]{cursor:pointer;user-select:none}
+#sb th .ar{opacity:.35;margin-left:3px}
+#sb th.sorted .ar{opacity:1;color:var(--wave)}
+#sb tbody tr{cursor:pointer}
+#sb tbody tr:hover td{background:var(--wave-soft)}
+#sb tbody tr.sel td{background:var(--wave-soft)}
+#sb tbody tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--wave)}
+#sb td.u b{font:600 13px var(--f-b)}
+#sb td.u small{display:block;font:500 10.5px var(--f-m);color:var(--text-lo);margin-top:1px}
+#sb tfoot td{font-weight:700;border-bottom:0;border-top:2px solid var(--border);background:var(--panel-2)}
+.pct{display:flex;align-items:center;gap:9px;justify-content:flex-end}
+.pct .tr{width:56px;height:7px;border-radius:999px;background:var(--track);overflow:hidden;flex:none}
+.pct .tr i{display:block;height:100%;background:var(--leased);border-radius:999px}
+.pct b{min-width:46px;text-align:right;font-weight:700}
+.dl{font:500 11.5px var(--f-m)}
+.pdoc{border:1px solid var(--border);background:var(--panel);color:var(--wave);cursor:pointer;padding:3px 9px;border-radius:8px;display:inline-flex;align-items:center;gap:5px;font:600 11.5px var(--f-b)}
+.pdoc:hover{border-color:var(--wave);box-shadow:0 0 0 3px var(--wave-soft)}
+.pdoc svg{width:14px;height:14px}
+.olist{display:grid;gap:2px}
+.orow{border:0;background:transparent;text-align:left;cursor:pointer;border-radius:10px;padding:7px 8px;display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:10px;align-items:center;font-size:12.5px;color:var(--text-hi)}
+.orow:hover{background:var(--panel-2)}
+.orow .on{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.orow small{display:block;color:var(--text-lo);font-size:11px;overflow:hidden;text-overflow:ellipsis}
+.orow b{font:700 12.5px var(--f-m);text-align:right}
+.orow b em{display:block;font:500 10.5px var(--f-m);font-style:normal;color:var(--text-lo)}
+.goals{display:grid;grid-template-columns:minmax(0,1fr);gap:3px}
+.goal{min-width:0;grid-template-columns:minmax(0,1fr)}
+.goal>*{min-width:0}
+.goal{border:0;background:transparent;text-align:left;width:100%;cursor:pointer;border-radius:10px;padding:7px 8px;display:grid;gap:5px}
+.goal:hover{background:var(--panel-2)}
+.goal.on{background:var(--wave-soft)}
+.goal.dim{opacity:.45}
+.goal .t{display:flex;justify-content:space-between;gap:10px;font-size:12.5px}
+.goal .t span{color:var(--text-mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.goal .t b{font:700 12.5px var(--f-m);white-space:nowrap}
+.goal .t b em{font:500 11px var(--f-m);font-style:normal;color:var(--text-lo)}
+.gbar{height:7px;border-radius:999px;background:var(--track);display:flex;overflow:hidden}
+.gbar i{display:block;height:100%;border-radius:999px}
+.notes{margin:0;padding:0 0 0 18px;color:var(--text-lo);font-size:12px;display:grid;gap:4px;max-width:140ch}
+.foot{font:500 11px var(--f-m);color:var(--text-lo);text-align:center;margin:0}
+
+/* units tab */
+.pane{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;min-width:0}
+.uhead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px 22px;align-items:center}
+.uhead .navb{display:flex;gap:8px}
+.uhead h2{margin:0;font:600 22px/1.2 var(--f-d);color:var(--pine-ink)}
+.uhead .meta{font:500 11.5px var(--f-m);color:var(--text-lo);margin-top:3px}
+.uhead .stats{grid-column:1/-1}
+.uacts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.stat{background:var(--panel-2);border:1px solid var(--border-soft);border-radius:10px;padding:10px 12px;min-width:0}
+.stat .lbl{display:flex;align-items:center;gap:6px}
+.stat b{display:block;font:700 19px/1.2 var(--f-m);margin-top:4px}
+.stat span.u{font:500 11.5px var(--f-b);color:var(--text-lo);margin-left:3px}
+.platgrid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px;align-items:start}
+.pbox{position:relative;margin:0 14px 14px;border-radius:12px;background:var(--panel-2);border:1px solid var(--border-soft);height:min(72vh,780px);min-height:440px;overflow:hidden}
+.plat-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+#keymap .tract,#keymap .uline{cursor:pointer}
+#plat{cursor:grab;touch-action:none}
+#plat.panning{cursor:grabbing}
+.tract{stroke:var(--pline);stroke-width:.8px;vector-effect:non-scaling-stroke;transition:opacity .15s}
+.tract.ctx{stroke-dasharray:3 3}
+.tract:hover{stroke:var(--text-hi);stroke-width:2px}
+.tract.dim{opacity:.2}
+.tract.sel{stroke:var(--text-hi);stroke-width:3.5px}
+.selhalo{fill:var(--wave);fill-opacity:.18;stroke:var(--wave);stroke-opacity:.35;stroke-width:14px;vector-effect:non-scaling-stroke;pointer-events:none;animation:pulse 1.6s ease-in-out 3}
+.selline{fill:none;stroke:var(--wave);stroke-width:4px;vector-effect:non-scaling-stroke;pointer-events:none}
+@keyframes pulse{0%,100%{stroke-opacity:.35}50%{stroke-opacity:.05}}
+.tract.find{stroke:var(--wave);stroke-width:4px}
+.uline{fill:none;stroke:var(--puline);stroke-width:2.2px;vector-effect:non-scaling-stroke;pointer-events:none}
+.uline.ctx{stroke:var(--text-lo);stroke-dasharray:7 5;stroke-width:1.5px}
+.uline.faint{opacity:.3}
+.uline.hl{stroke:var(--wave);stroke-width:3.5px}
+.labels text{fill:var(--text-hi);stroke:var(--panel-2);paint-order:stroke;stroke-linejoin:round;text-anchor:middle;dominant-baseline:central;font-family:var(--f-m);font-weight:500;pointer-events:none}
+.labels text.ul{font-family:var(--f-d);font-weight:700}
+.labels text.ctx{fill:var(--text-lo)}
+.leg{position:absolute;left:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--text-mid);background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:6px 10px;max-width:calc(100% - 20px)}
+.leg span{display:inline-flex;align-items:center;gap:6px}
+.leg .grad{width:70px;height:9px;border-radius:999px;background:linear-gradient(90deg,var(--unleased),var(--leased))}
+.lg{width:11px;height:11px;border-radius:3px;display:inline-block}
+.lg.ctx{background:var(--ctx);outline:1px dashed var(--text-lo);outline-offset:-1px}
+.zctl{position:absolute;top:10px;right:10px;display:grid;gap:8px}
+.pside{display:grid;gap:14px;max-height:calc(min(72vh,780px) + 80px);overflow:auto}
+.pside h3{margin:2px 0 8px;font:600 18px var(--f-d)}
+.pid{font:500 12px var(--f-m);color:var(--wave)}
+.kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 12px;font-size:12.5px}
+.kv span{color:var(--text-lo)}
+.kv b{font:700 13px var(--f-m);text-align:right}
+.tcount{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--text-mid)}
+.tcount span{display:inline-flex;gap:6px;align-items:center}
+.tcount b{color:var(--text-hi)}
+.back{border:0;background:none;color:var(--wave);font-weight:600;font-size:12.5px;cursor:pointer;padding:0;text-align:left}
+.spill{display:inline-flex;align-items:center;gap:6px;padding:2px 9px 2px 7px;border-radius:999px;font-size:11.5px;font-weight:600;border:1px solid var(--border);background:var(--panel)}
+.spill .sw{width:8px;height:8px;border-radius:50%}
+.s3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.s3 div{background:var(--panel-2);border:1px solid var(--border-soft);border-radius:10px;padding:9px 10px}
+.s3 b{display:block;font:700 15px var(--f-m)}
+.s3 span{font-size:11px;color:var(--text-lo)}
+.pside .acts{display:flex;gap:8px;flex-wrap:wrap}
+
+/* records */
+.llbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.llbar .left{display:flex;gap:14px;align-items:center;flex-wrap:wrap;flex:1;min-width:0}
+#q{border:1px solid var(--border);background:var(--panel-2);border-radius:10px;padding:9px 14px;width:min(360px,100%);font-size:13px}
+.count{font-size:12.5px;color:var(--text-mid)}
+.count b{color:var(--text-hi)}
+#ll{max-height:calc(100vh - 260px);min-height:420px}
+#ll th{cursor:pointer;user-select:none}
+#ll th .ar{opacity:.35;margin-left:4px}
+#ll th.sorted .ar{opacity:1;color:var(--wave)}
+#ll tbody tr{cursor:pointer}
+#ll tbody tr:hover td{background:var(--wave-soft)}
+#ll td.own{max-width:300px;overflow:hidden;text-overflow:ellipsis}
+#ll td.id{font-family:var(--f-m);font-size:12px;color:var(--wave)}
+
+/* overlays */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:20}
+.drawer{position:fixed;top:12px;right:12px;bottom:12px;width:min(440px,calc(100% - 24px));background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.25);z-index:21;display:flex;flex-direction:column;overflow:hidden;margin-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}
+.dh{padding:16px 20px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start;border-bottom:1px solid var(--border)}
+.dh .id{font:500 12px var(--f-m);color:var(--wave)}
+.dh h3{margin:4px 0 0;font:600 17px/1.3 var(--f-d)}
+.db{overflow:auto;padding:6px 20px 24px}
+.db dl{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px 14px;margin:0}
+.db dt{font:500 10.5px var(--f-m);letter-spacing:.06em;text-transform:uppercase;color:var(--text-lo);padding-top:2px}
+.db dd{margin:0;word-break:break-word}
+.db h4{margin:18px 0 8px;font:600 12.5px var(--f-d);color:var(--pine-ink)}
+#tip{position:fixed;pointer-events:none;background:var(--tip-bg);color:var(--tip-fg);font-size:12px;padding:8px 11px;border-radius:9px;z-index:50;max-width:280px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.docv{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;background:var(--bg);padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+.docv .dvh{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)}
+.docv h3{margin:0;font:600 17px var(--f-d)}
+.docv .dvs{font:500 11.5px var(--f-m);color:var(--text-lo);margin-top:2px}
+.docv .dvc{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.docv .zl{font:500 12px var(--f-m);color:var(--text-mid);min-width:48px;text-align:center}
+.dvb{position:relative;flex:1;overflow:hidden;margin:14px 20px 20px;border-radius:12px;background:var(--panel-2);border:1px solid var(--border);cursor:grab;touch-action:none}
+.dvb.panning{cursor:grabbing}
+.dvb img{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none;user-select:none;-webkit-user-drag:none;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+
+@media (max-width:1500px){.ovgrid{grid-template-columns:minmax(270px,1fr) minmax(0,1.7fr) minmax(270px,1fr)}}
+@media (max-width:1180px){.ovgrid{grid-template-columns:minmax(0,1fr)}.ovgrid .col.right{grid-template-columns:minmax(0,1fr)}.work2{grid-template-columns:minmax(0,1fr)}.platgrid{grid-template-columns:minmax(0,1fr)}.pside{max-height:none}.keybox{height:460px}}
+@media (min-width:761px){.kic{display:none}.kpi{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){
+  .frame{grid-template-columns:minmax(0,1fr);padding:0 16px 40px;gap:14px}
+  .rail{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;grid-auto-flow:column;grid-auto-columns:1fr;border-radius:0 0 14px 14px;margin:0 -16px;padding:6px 8px}
+  .rail hr{display:none}
+  .nav{padding:6px 2px}
+  .nav small{display:none}
+  .kpis,.stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi{grid-template-columns:minmax(0,1fr)}.kic{display:none}.kpi .v{font-size:21px}
+  .keybox{height:360px}.pbox{height:60vh}
+  .uhead{grid-template-columns:minmax(0,1fr)}.uacts{justify-content:flex-start}
+  .bar select{max-width:100%;flex:1 1 140px}
+  #sb .hm{display:none}
+  .logo{height:48px}
+  .gauge,.donut{flex-wrap:wrap}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="frame">
+  <nav class="rail" role="tablist" aria-label="Views" aria-orientation="vertical">
+    <button class="nav" role="tab" id="tab-ov" aria-controls="pane-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Overview</button>
+    <button class="nav" role="tab" id="tab-un" aria-controls="pane-un"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg>Units &amp; plats</button>
+    <button class="nav" role="tab" id="tab-ll" aria-controls="pane-ll"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Records<small id="llct"></small></button>
+    <hr>
+    <button class="nav" type="button" id="theme" aria-label="Switch color theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span id="theme-l">Dark</span></button>
+  </nav>
+
+  <div class="main">
+    <header class="head">
+      <div class="brand">
+        <img class="logo" src="/*__LOGO__*/" alt="Pine Wave Energy Partners">
+        <div>%%HOME%%<div class="upd">Last updated from the Mapper export · %%DATE_S%%</div><h1>%%CODE%% Leasing Dashboard</h1><div class="sub">%%REGION%%</div></div>
+      </div>
+      <div class="hside"><img class="seglogo" src="/*__SEGLOGO__*/" alt="Schoeffler Energy Group" title="Prepared by Schoeffler Energy Group"><div class="datepill">%%DATE_L%%</div></div>
+    </header>
+
+    <div class="bar" role="group" aria-label="Filters">
+      <select id="f-unit" class="unitsel" aria-label="Unit"></select>
+      <select id="f-ls" aria-label="Landowner status"></select>
+      <button class="btn" id="reset" type="button">Clear filters</button>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section id="pane-ov" role="tabpanel" aria-labelledby="tab-ov" class="pane">
+      <div class="ovgrid">
+        <div class="col">
+          <div class="kpis" id="kpis-l"></div>
+          <div class="c">
+            <div class="ch"><div><h2>Net acres by unit</h2><div class="sub">Leased vs unleased · click a unit to filter</div></div>
+              <div class="seg" id="ub-m" role="group" aria-label="Measure"><button data-m="ac">Net ac</button><button data-m="p">% leased</button></div></div>
+            <div class="blegend"><span><i class="sw" style="background:var(--leased)"></i>Leased</span><span><i class="sw" style="background:var(--unleased)"></i>Unleased</span></div>
+            <div class="ubars" id="ubars"></div>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="c mapc">
+            <div class="ch"><div><h2>Unit map</h2><div class="sub">Tracts by lease status · click a unit to open its plat</div></div>
+              <div class="qwrap"><input type="search" id="mapq" list="tractlist" placeholder="Find a tract or owner…" title="Type a tract (e.g. Davis 15), tract ID or owner name" aria-label="Find a tract or owner"><span class="qmsg" id="mapq-msg" role="status"></span></div></div>
+            <div class="keybox"><svg id="keymap" class="plat-svg" role="img" aria-label="Map of %%CODE%% units"></svg><div class="leg" id="key-leg"></div></div>
+            <div class="mapfoot" id="key-foot"></div>
+          </div>
+        </div>
+
+        <div class="col right">
+          <div class="kpis" id="kpis-r"></div>
+          <div class="c"><div class="ch"><div><h2>Net acres leased</h2><div class="sub" id="g-sub">Share of net acres</div></div></div><div class="gauge" id="gauge"></div></div>
+          <div class="c"><div class="ch"><div><h2>Tracts leased</h2><div class="sub">Tracts by share of net acres leased</div></div></div><div class="donut" id="donut"></div></div>
+        </div>
+      </div>
+
+      <div class="lower">
+        <div class="c">
+          <div class="ch"><div><h2>Units</h2><div class="sub">Plat acres vs net acres · click a unit to open it with its plat</div></div></div>
+          <div class="tblwrap"><table id="sb"></table></div>
+        </div>
+        <div class="work2">
+          <div class="c"><div class="ch"><div><h2>Largest unleased tracts</h2><div class="sub" id="wt-sub"></div></div></div><div class="olist" id="w-tracts"></div></div>
+          <div class="c"><div class="ch"><div><h2>Largest unleased owners</h2><div class="sub">Unleased net acres · click to see their records</div></div></div><div class="olist" id="w-owners"></div></div>
+        </div>
+      </div>
+      <ul class="notes" id="notes"></ul>
+      <p class="foot">Source: %%CODE%% Mapper Export, %%DATE_S%% · status = LEASING_STATUS · acres = NET_AC · %%ACRESRC%%</p>
+    </section>
+
+    <!-- UNITS -->
+    <section id="pane-un" role="tabpanel" aria-labelledby="tab-un" class="pane" hidden>
+      <div class="c uhead" id="uhead"></div>
+      <div class="platgrid">
+        <div class="c mapc">
+          <div class="ch"><div><h2>Plat map</h2><div class="sub">Drag to pan · scroll or + / − to zoom · click a tract for owners and leases</div></div>
+            <div class="qwrap"><input type="search" id="platq" list="tractlist" placeholder="Go to tract or owner…" aria-label="Go to a tract or owner"><span class="qmsg" id="platq-msg" role="status"></span></div><div class="seg" id="pl-shade" role="group" aria-label="Shade tracts by"><button data-v="st">Lease status</button><button data-v="pct">% leased</button></div></div>
+          <div class="pbox">
+            <svg id="plat" class="plat-svg" role="img" aria-label="Unit plat map"></svg>
+            <div class="zctl"><button class="ibtn" type="button" id="z-in" aria-label="Zoom in">+</button><button class="ibtn" type="button" id="z-out" aria-label="Zoom out">−</button><button class="ibtn" type="button" id="z-fit" aria-label="Fit to unit">⤢</button></div>
+            <div class="leg" id="pl-leg"></div>
+          </div>
+          <div class="mapfoot" id="pl-foot"></div>
+        </div>
+        <div class="c pside" id="pside"></div>
+      </div>
+    </section>
+
+    <!-- RECORDS -->
+    <section id="pane-ll" role="tabpanel" aria-labelledby="tab-ll" class="pane" hidden>
+      <div class="c">
+        <div class="llbar">
+          <div class="left">
+            <input type="search" id="q" placeholder="Search tract, owner, lease no., lessee…" aria-label="Search records">
+            <span class="count"><b id="llShown"></b> records · <b id="llTracts"></b> tracts · <b id="llAc"></b> net ac</span>
+          </div>
+          <div class="uacts"><button class="btn" type="button" id="ll-ov">← Overview</button><button class="btn" type="button" id="ll-un">Units &amp; plats</button><button class="btn pri" id="copy" type="button">Copy as CSV</button></div>
+        </div>
+        <div class="tblwrap" id="ll"><table><thead id="llh"></thead><tbody id="llb"></tbody></table></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="docv" id="docv" hidden role="dialog" aria-modal="true" aria-labelledby="dv-title">
+  <div class="dvh"><div><h3 id="dv-title"></h3><div class="dvs" id="dv-sub"></div></div>
+    <div class="dvc"><button class="ibtn" type="button" id="dv-out" aria-label="Zoom out">−</button><span class="zl" id="dv-z"></span><button class="ibtn" type="button" id="dv-in" aria-label="Zoom in">+</button><button class="btn" type="button" id="dv-fit">Fit page</button><button class="btn" type="button" id="dv-w">Fit width</button><button class="btn pri" type="button" id="dv-close">Close</button></div></div>
+  <div class="dvb" id="dvb"><img id="dv-img" alt="" draggable="false"></div>
+</div>
+<datalist id="tractlist"></datalist>
+<div id="tip" hidden></div>
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Record detail">
+  <div class="dh"><div><div class="id" id="d-id"></div><h3 id="d-owner"></h3></div><button class="btn" id="d-close" type="button">Close</button></div>
+  <div class="db" id="d-body"></div>
+</aside>
+
+<script>
+const DATA = /*__DATA__*/[];
+const GEO = /*__GEO__*/{};
+const EXPORT_DATE='Oct 14, 2026';
+/*__PREP__*/
+// ---------- overview ----------
+const ICON={map:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg>',
+  stack:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  open:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'};
+function stat(lbl,val,unit,extra=''){ return `<div class="stat" ${extra}><div class="lbl">${lbl}</div><b>${val}${unit?`<span class="u">${unit}</span>`:''}</b></div>`; }
+const anyOther=()=>['ls','sym','lessee','form','abs'].some(k=>state[k]);
+
+function renderKPIs(){
+  const all=scope(filtered()), base=scope(filtered({noLs:true})), P=pctOf(base), ua=unitAc(all);
+  const nUnits=new Set(all.map(r=>r.unitL)).size, openTr=new Set(base.filter(r=>r.g==='UNLEASED'&&r.cac>0).map(r=>r.id)).size;
+  const dTxt=`<span class="d g">${P.t?fmt(P.p*100,1)+'% of net acres':'–'}</span>`;
+  const T=[
+    `<div class="c kpi"><span class="kic">${ICON.map}</span><div><div class="k">Unit acres (plats)</div><div class="v">${state.unit===OUT?'–':fmt(ua,3)}<small>ac</small></div><div class="d m">${state.unit?esc(bl(state.unit)):fmt(nUnits)+' gas units'}</div></div></div>`,
+    `<div class="c kpi"><span class="kic">${ICON.stack}</span><div><div class="k">Net acres</div><div class="v">${fmt(P.t,2)}<small>ac</small></div><div class="d">${ua&&state.unit!==OUT?fmt(P.t/ua*100,1)+'% of plat acres':fmt(tracts(base))+' tracts'}</div></div></div>`,
+    `<button type="button" class="c kpi${state.ls==='LEASED'?' on':''}" data-g="LEASED"><span class="kic" style="color:var(--leased)">${ICON.check}</span><div><div class="k">Leased net acres</div><div class="v">${fmt(P.l,2)}<small>ac</small></div>${dTxt}</div></button>`,
+    `<button type="button" class="c kpi${state.ls==='UNLEASED'?' on':''}" data-g="UNLEASED"><span class="kic" style="color:var(--unleased)">${ICON.open}</span><div><div class="k">Unleased net acres</div><div class="v">${fmt(P.u,2)}<small>ac</small></div><div class="d">${fmt(openTr)} tracts open</div></div></button>`];
+  $('#kpis-l').innerHTML=T[0]+T[1]; $('#kpis-r').innerHTML=T[2]+T[3];
+  $$('.kpis button.kpi').forEach(b=>b.onclick=()=>toggle('ls',b.dataset.g));
+}
+
+let UBM='ac'; try{ const v=localStorage.getItem('pwe-ubm'); if(v==='ac'||v==='p') UBM=v; }catch(e){}
+function renderUnitBars(){
+  const base=filtered({noUnit:true,noLs:true});
+  const rows=UNITS.filter(u=>u!==OUT).map(u=>{ const rr=base.filter(r=>r.unitL===u), p=pctOf(rr); return {u,p}; }).filter(x=>x.p.t>0);
+  if(UBM==='p') rows.sort((a,b)=>a.p.p-b.p.p); else rows.sort((a,b)=>b.p.t-a.p.t);
+  const max=Math.max(...rows.map(x=>x.p.t),1);
+  $$('#ub-m button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===UBM));
+  $('#ubars').innerHTML=rows.map(x=>{ const on=state.unit===x.u, w=UBM==='p'?100:x.p.t/max*100;
+    return `<button type="button" class="ubar${on?' on':''}${state.unit&&!on?' dim':''}" data-u="${esc(x.u)}" data-tip="${esc(`<b>${title(x.u)}</b><br>Leased ${fmt(x.p.l,2)} ac · Unleased ${fmt(x.p.u,2)} ac<br>${fmt(x.p.p*100,1)}% of ${fmt(x.p.t,2)} net ac`)}">
+      <span class="t"><span class="n">${esc(ushort(x.u))}</span><span class="v">${UBM==='p'?fmt(x.p.p*100,1)+'%':fmt(x.p.t,1)}</span><span class="p">${UBM==='p'?fmt(x.p.t,1)+' ac':fmt(x.p.p*100,1)+'%'}</span></span>
+      <span class="bt" style="width:${w}%">${x.p.l>0?`<i style="flex:${x.p.l} 1 0;background:var(--leased)"></i>`:''}${x.p.u>0.0005?`<i style="flex:${x.p.u} 1 0;background:var(--unleased)"></i>`:''}</span></button>`; }).join('')||'<div class="empty">No units match the filters.</div>';
+  $$('#ubars .ubar').forEach(b=>b.onclick=()=>{ setUnit(state.unit===b.dataset.u?'':b.dataset.u); });
+}
+$$('#ub-m button').forEach(b=>b.onclick=()=>{ UBM=b.dataset.m; try{localStorage.setItem('pwe-ubm',UBM)}catch(e){} renderUnitBars(); });
+
+function renderGauge(){
+  const base=scope(filtered({noLs:true})), P=pctOf(base), C=2*Math.PI*52, ua=unitAc(base);
+  $('#g-sub').textContent=(state.unit?bl(state.unit):'All units')+' · share of net acres';
+  $('#gauge').innerHTML=`<svg viewBox="0 0 132 132" role="img" aria-label="${fmt(P.p*100,1)} percent leased">
+    <circle cx="66" cy="66" r="52" fill="none" stroke="var(--track)" stroke-width="12"/>
+    <circle cx="66" cy="66" r="52" fill="none" stroke="var(--leased)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${(P.p*C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 66 66)"/>
+    <text x="66" y="70" text-anchor="middle" style="font:700 21px var(--f-m);fill:var(--text-hi)">${P.t?fmt(P.p*100,1)+'%':'–'}</text></svg>
+    <div class="gtx"><div>Leased<b>${fmt(P.l,2)} ac</b></div><div>Remaining<b>${fmt(P.u,2)} ac</b></div>${ua&&state.unit!==OUT?`<div class="muted" style="font-size:11.5px">${fmt(P.l/ua*100,1)}% of ${fmt(ua,3)} plat acres</div>`:''}</div>`;
+}
+function renderDonut(){
+  const base=scope(filtered()), ids=[...new Set(base.map(r=>r.id))], cnt={L:0,P:0,U:0,Z:0}; ids.forEach(id=>cnt[TSTAT[id].s]++);
+  const tot=ids.length||1, R=46, C=2*Math.PI*R; let off=0, arcs='';
+  ['L','P','U','Z'].forEach(k=>{ if(!cnt[k]) return; const len=cnt[k]/tot*C, gap=ids.length>cnt[k]?2:0;
+    arcs+=`<circle cx="63" cy="63" r="${R}" fill="none" stroke="${k==='P'?'url(#DPAT)':PST[k].fill}" stroke-width="14" stroke-dasharray="${Math.max(0,len-gap).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 63 63)"><title>${PST[k].label}: ${cnt[k]}</title></circle>`; off+=len; });
+  $('#donut').innerHTML=`<svg viewBox="0 0 126 126" role="img" aria-label="Tracts by lease status"><defs><pattern id="DPAT" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--leased)"/><rect width="3" height="6" fill="var(--unleased)"/></pattern></defs>
+    <circle cx="63" cy="63" r="${R}" fill="none" stroke="var(--track)" stroke-width="14"/>${arcs}
+    <text x="63" y="62" text-anchor="middle" style="font:700 24px var(--f-m);fill:var(--text-hi)">${fmt(ids.length)}</text><text x="63" y="80" text-anchor="middle" style="font:500 11px var(--f-b);fill:var(--text-lo)">tracts</text></svg>
+    <div class="dleg">${['L','P','U','Z'].map(k=>`<div>${swatch(k)}<span>${PST[k].label}</span><b>${fmt(cnt[k])}</b></div>`).join('')}</div>`;
+}
+
+function renderLists(){
+  const all=scope(filtered({noLs:true}));
+  const ids=[...new Set(all.map(r=>r.id))].map(id=>({id,S:TSTAT[id]})).filter(x=>x.S.t-x.S.l>1e-6).sort((a,b)=>(b.S.t-b.S.l)-(a.S.t-a.S.l));
+  $('#wt-sub').textContent=`${fmt(ids.length)} tracts · ${fmt(ids.reduce((a,x)=>a+x.S.t-x.S.l,0),2)} unleased ac · click to open on the plat`;
+  $('#w-tracts').innerHTML=ids.slice(0,7).map(x=>`<button type="button" class="orow" data-t="${esc(x.id)}">${swatch(x.S.s)}<span class="on">${x.S.unit===OUT?'':esc(ushort(x.S.unit))+' · '}${TNUM[x.id]?'Tract '+esc(TNUM[x.id]):esc(x.id)}<small>${esc(x.id)} · ${fmt(x.S.p*100,1)}% leased</small></span><b>${fmt(x.S.t-x.S.l,2)}<em>of ${fmt(x.S.t,2)} ac</em></b></button>`).join('')||'<div class="empty">No unleased acreage in this selection.</div>';
+  $$('#w-tracts .orow').forEach(b=>b.onclick=()=>openTract(b.dataset.t));
+  const om=new Map(); all.filter(r=>r.g==='UNLEASED'&&r.cac>0).forEach(r=>{ const k=r.oid??r.owner; const o=om.get(k)||{n:r.owner,a:0,t:new Set(),u:new Set()}; o.a+=r.cac; o.t.add(r.id); o.u.add(r.unitL); om.set(k,o); });
+  $('#w-owners').innerHTML=[...om.values()].sort((a,b)=>b.a-a.a).slice(0,7).map(o=>`<button type="button" class="orow" data-o="${esc(o.n)}"><i class="sw" style="background:var(--unleased)"></i><span class="on" title="${esc(o.n)}">${esc(oname(o.n))}<small>${[...o.u].map(ushort).join(', ')} · ${fmt(o.t.size)} tract${o.t.size>1?'s':''}</small></span><b>${fmt(o.a,2)}<em>ac</em></b></button>`).join('')||'<div class="empty">No unleased owners in this selection.</div>';
+  $$('#w-owners .orow').forEach(b=>b.onclick=()=>{ state.ls='UNLEASED'; state.q=b.dataset.o; $('#q').value=b.dataset.o; setTab('ll'); render(); });
+}
+/*__BOARD__*/
+/*__GOAL__*/
+
+/*__NOTES__*/
+/*__REST__*/
+// ---------- map search + tract jump ----------
+// bring the plat map on screen so the zoomed tract is visible, not just the unit header
+function showMap(){ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches; const el=$('#pane-un .pbox'); if(el) el.scrollIntoView({block:'center',behavior:reduce?'auto':'smooth'}); }
+function openTract(id){ if(!TSTAT[id]) return; const u=TSTAT[id].unit; setUnit(u===OUT?'':u,true); PL.tract=id; setTab('un'); render(); zoomTract(id); requestAnimationFrame(()=>requestAnimationFrame(showMap)); }
+// every export tract as a search suggestion: "Davis · Tract 15 · TX203-0304-055"
+const TLIST=Object.keys(TSTAT).map(id=>({id,u:TSTAT[id].unit,tn:TNUM[id]||''})).sort((a,b)=>sortU(a.u,b.u)||String(a.tn||'~').localeCompare(String(b.tn||'~'),undefined,{numeric:true})||a.id.localeCompare(b.id));
+const tlabel=x=>`${ushort(x.u)}${x.tn?' · Tract '+x.tn:''} · ${x.id}`;
+$('#tractlist').innerHTML=TLIST.map(x=>`<option value="${esc(tlabel(x))}"></option>`).join('');
+// resolve a typed value to a tract: tract ID, "unit + plat tract no.", plat tract no. within the open unit, or an owner name
+function resolveQuery(raw){ const q=raw.trim().toLowerCase(); if(!q) return null;
+  const idm=q.match(/tx\d{3}-\d{4}-\d{3}/); if(idm){ const t=TLIST.find(x=>x.id.toLowerCase()===idm[0]); if(t) return {id:t.id}; }
+  if(/^\d{3,4}-\d{3}$|^\d{4}-\d{3}$/.test(q)){ const t=TLIST.filter(x=>x.id.toLowerCase().endsWith(q)); if(t.length===1) return {id:t[0].id}; }
+  const m=q.replace(/\btract\b|·/g,' ').replace(/\s+/g,' ').trim().match(/^(.*?)\s*([0-9]+[a-z]?)$/i);
+  if(m){ const un=m[1].trim(), num=m[2].toLowerCase();
+    const c=TLIST.filter(x=>x.tn.toLowerCase()===num&&(un?ushort(x.u).toLowerCase().startsWith(un):true));
+    const inUnit=!un&&state.unit?c.filter(x=>x.u===state.unit):c;
+    if(inUnit.length===1) return {id:inUnit[0].id};
+    if(c.length>1) return {msg:`Tract ${num.toUpperCase()} is in ${c.length} units (${[...new Set(c.map(x=>ushort(x.u)))].join(', ')}). Type the unit too, e.g. “${ushort(c[0].u)} ${num.toUpperCase()}”.`};
+    if(un&&!c.length&&/^\d/.test(num)) return {msg:`No tract ${num.toUpperCase()} found${un?' in '+un:''}.`}; }
+  const own=DATA.filter(r=>r.owner.toLowerCase().includes(q));
+  if(own.length){ const ids=[...new Set(own.map(r=>r.id))]; if(ids.length===1) return {id:ids[0]}; return {owner:raw.trim()}; }
+  return {msg:'No tract or owner matches that search.'}; }
+function goSearch(inp){ const msg=$('#'+inp.id+'-msg'); msg.textContent=''; const r=resolveQuery(inp.value); if(!r) return;
+  if(r.id){ inp.value=''; openTract(r.id); return; }
+  if(r.owner){ state.q=r.owner; $('#q').value=r.owner; setTab('ll'); render(); return; }
+  msg.textContent=r.msg; }
+['#mapq','#platq'].forEach(s=>{ const el=$(s);
+  el.addEventListener('keydown',e=>{ if(e.key==='Enter') goSearch(el); });
+  el.addEventListener('change',()=>{ if(/tx\d{3}-\d{4}-\d{3}/i.test(el.value)) goSearch(el); });
+  el.addEventListener('input',()=>{ $('#'+el.id+'-msg').textContent=''; }); });
+
+// ---------- shell ----------
+const toggle=(k,v)=>{ state[k]=state[k]===v?'':v; render(); };
+function setUnit(u,keepTract){ state.unit=u||''; if(!keepTract) PL.tract=null; PL.fitKey=null; render(); }
+function renderUnitSel(){ const base=filtered({noUnit:true,noLs:true});
+  $('#f-unit').innerHTML=[''].concat(UNITS).map(u=>{ const p=pctOf(u?base.filter(r=>r.unitL===u):base.filter(r=>r.unitL!==OUT)); return `<option value="${esc(u)}">${u?esc(bl(u)):'All units'} · ${pctTxt(p)} leased</option>`; }).join('');
+  $('#f-unit').value=state.unit; }
+function renderChips(){ const c=[], add=(k,lab,t)=>c.push(`<span class="chip">${lab}: ${esc(t)}<button type="button" aria-label="Remove ${lab} filter" data-k="${k}">×</button></span>`);
+  if(state.unit) add('unit','Unit',bl(state.unit));
+  Object.entries(FK).forEach(([k,[,lab]])=>{ if(state[k]) add(k,lab,k==='ls'?title(state[k]):bl(state[k])); });
+  if(state.q) add('q','Search','“'+state.q+'”');
+  $('#chips').innerHTML=c.join('');
+  $$('#chips button').forEach(b=>b.onclick=()=>{ state[b.dataset.k]=''; if(b.dataset.k==='q') $('#q').value=''; if(b.dataset.k==='unit'){ PL.tract=null; PL.fitKey=null; } render(); }); }
+function render(){ Object.entries(FK).forEach(([k,[sel]])=>{ const el=$(sel); if(el) el.value=state[k]; }); hideTip();
+  renderUnitSel(); renderChips(); renderKPIs(); renderUnitBars(); renderGauge(); renderDonut(); renderLists(); renderBoard(); renderKey(); renderList(); renderPlat(); }
+const TABS=['ov','un','ll']; let curTab=null;
+function setTab(t){ if(t!==curTab){ curTab=t; scrollTo(0,0); } TABS.forEach(k=>{ $('#tab-'+k).setAttribute('aria-selected',t===k); $('#pane-'+k).hidden=t!==k; });
+  if(t==='un') requestAnimationFrame(()=>{ PL.fitKey=PL.tract?state.unit:null; renderPlat(); if(PL.tract){ fitPlat(); zoomTract(PL.tract); } }); }
+TABS.forEach(k=>$('#tab-'+k).onclick=()=>setTab(k));
+// size the overview map so the whole map fits in the window on first view
+function fitKeyBox(){ const box=$('.keybox'); if(!box||$('#pane-ov').hidden) return; if(innerWidth<=760){ box.style.height=''; return; }
+  const top=box.getBoundingClientRect().top+scrollY, foot=$('#key-foot').offsetHeight+30;
+  box.style.height=Math.max(300,Math.min(900,Math.round(innerHeight-top-foot)))+'px'; }
+addEventListener('resize',()=>requestAnimationFrame(fitKeyBox));
+$('#tab-ov').addEventListener('click',()=>requestAnimationFrame(fitKeyBox));
+$('#ll-ov').onclick=()=>setTab('ov'); $('#ll-un').onclick=()=>setTab('un');
+(function(){ const root=document.documentElement, mq=matchMedia('(prefers-color-scheme: dark)'), cur=()=>root.getAttribute('data-theme')||(mq.matches?'dark':'light');
+  const lab=()=>{ $('#theme-l').textContent=cur()==='dark'?'Light':'Dark'; };
+  try{ const s=localStorage.getItem('pwe-theme'); if(s==='light'||s==='dark') root.setAttribute('data-theme',s); }catch(e){}
+  lab(); mq.addEventListener&&mq.addEventListener('change',lab);
+  $('#theme').onclick=()=>{ const n=cur()==='light'?'dark':'light'; root.setAttribute('data-theme',n); try{ localStorage.setItem('pwe-theme',n); }catch(e){} lab(); }; })();
+renderNotes();
+render();
+// always open on the Overview; a #records or #units link can still deep-link a tab
+let st='ov'; if(location.hash==='#records') st='ll'; else if(location.hash==='#units'||location.hash==='#plats') st='un';
+setTab(st);
+requestAnimationFrame(fitKeyBox); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>requestAnimationFrame(fitKeyBox));
+</script>

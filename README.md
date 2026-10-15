@@ -1,34 +1,26 @@
-# PWE III Leasing Dashboard
+# PWE Leasing Dashboards
 
-Leased net acres by gas unit for Pine Wave Energy Partners III, built from the PWE III Mapper Export.
-Acreage ties to the unit survey plats. Current data: Mapper Export 10/14/2026, parcel shapes Master_Parcels_261015.
+Leased net acres for Pine Wave Energy Partners projects, built from each project's Mapper Export.
+Deployed on Vercel (project `pwe-iii-leasing`, team segland); every push to `main` redeploys.
 
-## Files
-- `index.html` – the dashboard (data, map shapes and logos are inside this file)
-- `plats/` – survey plat images opened from the Units & plats tab
-- `vercel.json` – static hosting settings (no build step)
+## Pages
+| Path | What it is |
+|---|---|
+| `/` (`index.html`) | Landing page: one card per project with totals and a small tract map |
+| `/pwe-iii/` | PWE III dashboard (Harrison County, TX) · unit acres tie to the Bowman survey plats in `pwe-iii/plats/` |
+| `/pwe-iv/` | PWE IV dashboard (Black Lake · Natchitoches & Red River Parishes, LA) · no units or plats yet, tracts grouped by township-range |
 
-## First deploy (one time)
-```
-cd "S:\SEG-DATA Management\Pine Wave Energy\PWE III\pwe-iii-leasing"
-npx vercel --scope segland
-npx vercel --prod --scope segland
-```
-Accept the defaults; name the project `pwe-iii-leasing`. There is no build command or framework.
+Rules for both: status = `LEASING_STATUS`, acres = `NET_AC`, each owner interest counted once per tract, no GIS acres.
 
-## Updating
-Replace `index.html` (and any changed plat in `plats/`), then run:
-```
-npx vercel --prod --scope segland
-```
+## Rebuilding (`build/`)
+`build/` holds the template and scripts; Vercel does not publish it (`.vercelignore`).
 
-## Optional: deploy from GitHub
-```
-git init
-git add .
-git commit -m "PWE III leasing dashboard"
-git branch -M main
-git remote add origin https://github.com/jguy6777/pwe-iii-leasing.git
-git push -u origin main
-```
-Then in Vercel, import the repo under segland. Every push to `main` redeploys.
+- `v3/shell.html` + `v3/_*.js` – shared dashboard template
+- `v3/_plats_pwe3.js`, `v3/_plats_pwe4.js` – per-project plat calls, plat images, notes, owner-name tag
+- `build_data.py <export.xlsx> <out.json>` – Mapper Export → dashboard data
+- `build_geo_pwe3.py` – PWE III Master Parcels shapefile → map shapes
+- `build_geo_simple.py <shp-stem> <data.json> <out.json>` – PWE IV tract shapefile → map shapes
+- `build_project.py <pwe3|pwe4> <out.html> --home` – one project page
+- `build_landing.py <out.html>` – landing page
+
+PWE IV data is grouped by `T{TOWNSHIP}-R{RANGE}` after `build_data.py` runs; switch to units once they're set.
