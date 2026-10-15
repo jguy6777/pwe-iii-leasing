@@ -8,3 +8,4 @@ const PLATNOTE={};
 // project notes shown under Notes on the Overview
 const PNOTES=['No gas units or survey plats are set for PWE IV yet, so tracts are grouped by township-range and acreage is the tract acreage from the Mapper export.'];
 const PTAG=/\s*-\s*PWE\s*IV\s*$/i;
+const ABS_SRC=null; // Louisiana uses the SONRIS section grid instead of abstracts

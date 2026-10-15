@@ -930,6 +930,12 @@ td.r{font-family:var(--f-m);font-size:12px}
 .strt{stroke:var(--text-mid);stroke-opacity:.85;fill:none}
 .sat .strl{stroke:#FFE7A0;stroke-opacity:.55}
 .sat .strt{stroke:#FFD45A;stroke-opacity:.9}
+.lg.absk{background:none;border-top:2px dashed #8A5526;border-radius:0;height:0;width:14px}
+.absl{stroke:#8A5526;stroke-dasharray:7 4;stroke-opacity:.85;fill:none}
+.sat .absl{stroke:#FFD45A;stroke-opacity:.95}
+.mlab.abs span{font:700 11px var(--f-m);color:var(--wave);text-align:center;line-height:1.25}
+.mlab.abs small{display:block;font:500 10px var(--f-b);opacity:.9}
+.sat .mlab.abs span{color:#FFE7A0}
 .lg.strk{background:none;border-top:2px solid var(--text-mid);border-radius:0;height:0;width:14px}
 .bctl{position:absolute;top:10px;left:10px;display:flex;gap:6px;z-index:1000}
 .bctl .seg{background:var(--panel)}
@@ -1188,6 +1194,8 @@ const PLATNOTE={};
 // project notes shown under Notes on the Overview
 const PNOTES=['Unit acres follow the Bowman survey plats. TX203-0075-011 (31.25 ac) is assigned to Jennifer Stewart GU in the export but is not on its plat, so it is left out of that unit\'s acres.'];
 const PTAG=/\s*-\s*PWE\s*III\s*$/i;
+// Texas abstract (survey) boundaries: RRC Original Texas Land Survey layer, loaded live on the plat map
+const ABS_SRC='https://gis.rrc.texas.gov/server/rest/services/rrc_public/RRC_Public_Viewer_Srvs/MapServer/24';
 
 
 // ---------- data prep ----------
@@ -1439,12 +1447,13 @@ function drawLabels(m){ const G=m._L.labels; G.clearLayers(); if(!m._loaded) ret
   const lab=(ll,txt,cls)=>L.marker(ll,{interactive:false,keyboard:false,icon:L.divIcon({className:'mlab '+cls,html:`<span>${esc(txt)}</span>`,iconSize:null})}).addTo(G);
   if(zoomed){ GEO.t.forEach(t=>{ if(!t.ut||(state.unit&&t.unit!==state.unit)||!vb.contains(t.l)) return; lab(t.l,t.ut,'tn'); }); }
   else GEO.u.forEach(u=>{ if(u.ctx&&GEO.u.some(v=>!v.ctx&&ushort(v.u).toUpperCase()===u.u.toUpperCase())) return; lab(u.l,u.ctx?title(u.u):ushort(u.u),'ul'+(u.ctx?' ctx':'')+(m._id==='k'?' k':'')); });
-  if(m._id==='p'&&STR&&PL.grid&&m.getZoom()>=12.5) STR.p.forEach(p=>{ if(vb.contains([p[0],p[1]])) lab([p[0],p[1]],p[2],'sec'); }); }
+  if(m._id==='p'&&STR&&PL.grid&&m.getZoom()>=12.5) STR.p.forEach(p=>{ if(vb.contains([p[0],p[1]])) lab([p[0],p[1]],p[2],'sec'); });
+  if(m._id==='p'&&ABS&&PL.grid&&m.getZoom()>=13) ABS.forEach(a=>{ if(a.l&&vb.contains(a.p)) L.marker(a.p,{interactive:false,keyboard:false,icon:L.divIcon({className:'mlab abs',html:`<span>${esc(a.l)}${a.n?`<small>${esc(a.n)}</small>`:''}</span>`,iconSize:null})}).addTo(G); }); }
 
 // legend items are buttons: click one to hide / show those tracts on both maps (Section grid toggles the grid)
 const legBtn=k=>`<button type="button" class="lgb" data-st="${k}" aria-pressed="${!PL.hide.has(k)}" title="Click to ${PL.hide.has(k)?'show':'hide'} ${PST[k].label.toLowerCase()} tracts"><i class="lg ${k==='P'?'part':k==='X'?'ctx':''}" style="${k==='P'||k==='X'?'':'background:'+PST[k].fill}"></i>${PST[k].label}</button>`;
 const hasCtx=()=>GEO.t.some(t=>t.st==='X');
-function legendHtml(){ const grid=STR?`<button type="button" class="lgb" data-grid="1" aria-pressed="${PL.grid}" title="Click to ${PL.grid?'hide':'show'} the section grid"><i class="lg strk"></i>Section grid</button>`:'';
+function legendHtml(){ const ov=OVL(), grid=ov&&(STR||ABS)?`<button type="button" class="lgb" data-grid="1" aria-pressed="${PL.grid}" title="Click to ${PL.grid?'hide':'show'} the ${ov.toLowerCase()}"><i class="lg ${STR?'strk':'absk'}"></i>${ov}</button>`:'';
   if(PL.shade==='pct') return `<span><i class="lg" style="background:var(--s-work)"></i>0%</span><span class="grad"></span><span><i class="lg" style="background:var(--s-acq)"></i>100% leased</span>${legBtn('Z')}${hasCtx()?legBtn('X'):''}${grid}`;
   return ['L','P','U','Z','X'].filter(k=>k!=='X'||hasCtx()).map(legBtn).join('')+grid; }
 function keyLegendHtml(){ return ['L','P','U','X'].filter(k=>k!=='X'||hasCtx()).map(legBtn).join(''); }
@@ -1457,11 +1466,29 @@ $('#key-leg').addEventListener('click',onLegend); $('#pl-leg').addEventListener(
 // ---------- section-township-range grid (SONRIS) ----------
 // Snapshot of SONRIS DNRSvc/COMMON section + township lines (1:24,000) and section points, pulled 10/15/2026.
 // SONRIS does not allow cross-site requests, so the grid ships with the page.
-function drawGrid(m){ const G=m._L.grid; G.clearLayers(); if(!STR||!PL.grid||m._id!=='p') return;
+// ---------- Texas abstracts (RRC Original Texas Land Survey, loaded live) ----------
+// The RRC map service allows cross-site requests, so abstract boundaries come straight from RRC each time.
+let ABS=null;
+const OVL=()=>STR?'Section grid':ABS_SRC?'Abstracts':null;   // which reference overlay this project has
+function ringCentroid(r){ let a=0,x=0,y=0; for(let i=0,j=r.length-1;i<r.length;j=i++){ const f=r[j][1]*r[i][0]-r[i][1]*r[j][0]; a+=f; x+=(r[j][1]+r[i][1])*f; y+=(r[j][0]+r[i][0])*f; }
+  return a?[y/(3*a),x/(3*a)]:r[0]; }
+async function loadAbs(){ if(!ABS_SRC||ABS) return;
+  const b=FULLB.pad(.08), env=encodeURIComponent(JSON.stringify({xmin:b.getWest(),ymin:b.getSouth(),xmax:b.getEast(),ymax:b.getNorth(),spatialReference:{wkid:4269}}));
+  try{ const j=await fetch(`${ABS_SRC}/query?f=json&where=1%3D1&geometry=${env}&geometryType=esriGeometryEnvelope&inSR=4269&outSR=4269&spatialRel=esriSpatialRelIntersects&outFields=ABSTRACT_LABEL,LEVEL1_SURVEY_NAME,LEVEL2_BLOCK_NUMBER,LEVEL3_SURVEY_NUMBER&returnGeometry=true&maxAllowableOffset=0.00003&geometryPrecision=6&resultRecordCount=2000`,{signal:AbortSignal.timeout(15000)}).then(r=>r.json());
+    if(!j.features) return;
+    ABS=j.features.map(f=>{ const rings=f.geometry.rings.map(r=>r.map(([x,y])=>[y,x])), big=rings.reduce((a,r)=>r.length>a.length?r:a,rings[0]), a=f.attributes;
+      const nm=[a.LEVEL1_SURVEY_NAME,a.LEVEL2_BLOCK_NUMBER&&a.LEVEL2_BLOCK_NUMBER.trim()?'Blk '+a.LEVEL2_BLOCK_NUMBER.trim():'',a.LEVEL3_SURVEY_NUMBER&&a.LEVEL3_SURVEY_NUMBER.trim()?'Sec '+a.LEVEL3_SURVEY_NUMBER.trim():''].filter(s=>s&&s.trim()).join(' · ');
+      return {c:rings,l:(a.ABSTRACT_LABEL||'').trim(),n:title((nm||'').trim()),p:ringCentroid(big)}; });
+    if(MP&&MP._loaded){ drawGrid(MP); drawLabels(MP); } renderGridNote(); $('#pl-leg').innerHTML=legendHtml(); }catch(e){ console.warn('RRC abstracts unavailable',e); }
+}
+function drawGrid(m){ const G=m._L.grid; G.clearLayers(); if(!PL.grid||m._id!=='p') return;
+  if(ABS) ABS.forEach(a=>L.polygon(a.c,{renderer:m._G,interactive:false,fill:false,className:'absl',weight:1.6}).addTo(G));
+  if(!STR) return;
   STR.s.forEach(l=>L.polyline(l,{renderer:m._G,interactive:false,className:'strl',weight:1}).addTo(G));
   STR.t.forEach(l=>L.polyline(l,{renderer:m._G,interactive:false,className:'strt',weight:2.4}).addTo(G)); }
-function renderGridNote(){ const b=$('#z-grid'); if(!b) return; b.parentElement.hidden=!STR; if(!STR) return;
-  b.setAttribute('aria-pressed',PL.grid); b.title='Section-township-range grid from SONRIS (pulled 10/15/2026)'; }
+function renderGridNote(){ const b=$('#z-grid'); if(!b) return; b.parentElement.hidden=!OVL(); if(!OVL()) return;
+  b.textContent=STR?'STR grid':'Abstracts'; b.setAttribute('aria-pressed',PL.grid);
+  b.title=STR?'Section-township-range grid from SONRIS (pulled 10/15/2026)':ABS?'Abstract (survey) boundaries, live from the Texas Railroad Commission':'Abstracts: loading from the Texas Railroad Commission…'; }
 
 // ---------- overview key map ----------
 let KM=null;
@@ -1486,7 +1513,7 @@ function initPlat(){ if(MP) return;
   $('#z-in').onclick=()=>MP.zoomIn(); $('#z-out').onclick=()=>MP.zoomOut(); $('#z-fit').onclick=()=>fitPlat();
   $$('#z-base button').forEach(b=>b.onclick=()=>{ PL.base=b.dataset.b; try{localStorage.setItem('pwe-base',PL.base)}catch(e){} render(); });
   const g=$('#z-grid'); if(g) g.onclick=()=>{ PL.grid=!PL.grid; try{localStorage.setItem('pwe-grid',PL.grid?'1':'0')}catch(e){} drawGrid(MP); drawLabels(MP); renderGridNote(); $('#pl-leg').innerHTML=legendHtml(); };
-  renderGridNote(); }
+  renderGridNote(); loadAbs(); }
 // basemap follows the light/dark theme
 new MutationObserver(()=>{ [KM,MP].forEach(m=>{ if(m) setBase(m); }); }).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 

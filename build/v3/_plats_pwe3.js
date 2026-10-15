@@ -16,3 +16,5 @@ const PLATNOTE={};
 // project notes shown under Notes on the Overview
 const PNOTES=['Unit acres follow the Bowman survey plats. TX203-0075-011 (31.25 ac) is assigned to Jennifer Stewart GU in the export but is not on its plat, so it is left out of that unit\'s acres.'];
 const PTAG=/\s*-\s*PWE\s*III\s*$/i;
+// Texas abstract (survey) boundaries: RRC Original Texas Land Survey layer, loaded live on the plat map
+const ABS_SRC='https://gis.rrc.texas.gov/server/rest/services/rrc_public/RRC_Public_Viewer_Srvs/MapServer/24';
