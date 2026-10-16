@@ -1810,7 +1810,7 @@ const TOUR=(function(){
   let i=-1, saved=null, el=null, hole=null, raf=0;
   // ----- narration: recorded neural-voice clips (tour/NN.mp3, from build_tour_audio.py) read each step and move on by themselves;
   //       if a clip can't load (e.g. a single-file copy) the browser's own speech voice reads that step instead -----
-  const SY=window.speechSynthesis, HasSynth=!!(SY&&window.SpeechSynthesisUtterance), CanSpeak=true, AUD=new Audio(), clip=k=>`tour/${String(k+1).padStart(2,'0')}.mp3?v=2`;
+  const SY=window.speechSynthesis, HasSynth=!!(SY&&window.SpeechSynthesisUtterance), CanSpeak=true, AUD=new Audio(), clip=k=>`tour/${String(k+1).padStart(2,'0')}.mp3?v=3`;
   let noClips=false; AUD.preload='auto';
   let playing=false, voice=null, utt=0, adv=0;
   const pickVoice=()=>{ if(!HasSynth) return null; const v=SY.getVoices(), en=v.filter(x=>/^en[-_]US/i.test(x.lang)), any=v.filter(x=>/^en/i.test(x.lang));
@@ -1822,7 +1822,7 @@ const TOUR=(function(){
       .replace(/<b>‹<\/b> and <b>›<\/b>/g,'the arrow buttons').replace(/<b>\+<\/b> \/ <b>−<\/b>/g,'the plus and minus buttons')
       .replace(/ \(or the plus and minus buttons\)/,', or use the plus and minus buttons,').replace(/% leased/g,'percent leased').replace(/ \/ /g,' or ').replace(/<b>⤢<\/b>/g,'the fit button').replace(/<b>×<\/b>/g,'the x')
       .replace(/<[^>]+>/g,'').replace(/&amp;/g,'and').replace(/&[a-z]+;/g,' ')
-      .replace(/\bPWE III\b/g,'P W E 3').replace(/\bPWE IV\b/g,'P W E 4').replace(/\bSTR\b/g,'S T R').replace(/\bRRC\b/g,'R R C').replace(/\bSONRIS\b/g,'Sonris')
+      .replace(/\bPWE III\b/g,'Pine Wave 3').replace(/\bPWE IV\b/g,'Pine Wave 4').replace(/\bPWE\b/g,'Pine Wave').replace(/\bSTR\b/g,'S T R').replace(/\bRRC\b/g,'R R C').replace(/\bSONRIS\b/g,'Sonris')
       .replace(/contract no\./g,'contract number').replace(/\bEsc\b/g,'Escape').replace(/\bNet ac\b/g,'Net acres').replace(/Oct (\d+), (\d{4})/g,'October $1, $2');
     return t.replace(/\s+/g,' ').trim(); };
   function stopVoice(){ clearTimeout(adv); utt++; AUD.onended=AUD.onerror=null; try{ AUD.pause(); }catch(e){} if(HasSynth) SY.cancel(); }
