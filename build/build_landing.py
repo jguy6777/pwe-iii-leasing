@@ -169,7 +169,6 @@ dd small{{font:500 11px var(--f-b);color:var(--text-lo);margin-left:3px}}
   </section>
   <main class="grid">{''.join(cards)}
   </main>
-  <p class="foot">status = LEASING_STATUS · acres = NET_AC · each owner interest counted once per tract</p>
 </div>
 <script>
 (function(){{ const root=document.documentElement, mq=matchMedia('(prefers-color-scheme: dark)'), b=document.getElementById('theme');
