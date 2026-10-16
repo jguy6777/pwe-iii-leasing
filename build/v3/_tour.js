@@ -29,13 +29,15 @@ const TOUR=(function(){
     {t:`You're all set`, b:`That's the whole dashboard. Replay this tour any time from the <b>Tour</b> button on the left.<br><br>Data: %%CODE%% Mapper export, %%DATE_S%%.`},
   ];
   let i=-1, saved=null, el=null, hole=null, raf=0;
-  // ----- narration: the browser's built-in speech voice reads each step and moves on by itself -----
-  const SY=window.speechSynthesis, CanSpeak=!!(SY&&window.SpeechSynthesisUtterance);
+  // ----- narration: recorded neural-voice clips (tour/NN.mp3, from build_tour_audio.py) read each step and move on by themselves;
+  //       if a clip can't load (e.g. a single-file copy) the browser's own speech voice reads that step instead -----
+  const SY=window.speechSynthesis, HasSynth=!!(SY&&window.SpeechSynthesisUtterance), CanSpeak=true, AUD=new Audio(), clip=k=>`tour/${String(k+1).padStart(2,'0')}.mp3?v=2`;
+  let noClips=false; AUD.preload='auto';
   let playing=false, voice=null, utt=0, adv=0;
-  const pickVoice=()=>{ if(!CanSpeak) return null; const v=SY.getVoices(), en=v.filter(x=>/^en[-_]US/i.test(x.lang)), any=v.filter(x=>/^en/i.test(x.lang));
+  const pickVoice=()=>{ if(!HasSynth) return null; const v=SY.getVoices(), en=v.filter(x=>/^en[-_]US/i.test(x.lang)), any=v.filter(x=>/^en/i.test(x.lang));
     const find=re=>en.find(x=>re.test(x.name))||any.find(x=>re.test(x.name));
     return find(/(Aria|Jenny|Ava|Emma|Andrew|Guy).*Natural/i)||find(/Natural/i)||find(/Google US English/i)||find(/Samantha|Ava|Allison|Zira/i)||en[0]||any[0]||null; };
-  if(CanSpeak){ voice=pickVoice(); SY.addEventListener&&SY.addEventListener('voiceschanged',()=>{ voice=pickVoice(); }); }
+  if(HasSynth){ voice=pickVoice(); SY.addEventListener&&SY.addEventListener('voiceschanged',()=>{ voice=pickVoice(); }); }
   // spoken wording: symbols and abbreviations a voice would stumble on
   const spoken=st=>{ let t=(st.t+'. '+st.b).replace(/<br\s*\/?>/g,' ')
       .replace(/<b>‹<\/b> and <b>›<\/b>/g,'the arrow buttons').replace(/<b>\+<\/b> \/ <b>−<\/b>/g,'the plus and minus buttons')
@@ -44,11 +46,17 @@ const TOUR=(function(){
       .replace(/\bPWE III\b/g,'P W E 3').replace(/\bPWE IV\b/g,'P W E 4').replace(/\bSTR\b/g,'S T R').replace(/\bRRC\b/g,'R R C').replace(/\bSONRIS\b/g,'Sonris')
       .replace(/contract no\./g,'contract number').replace(/\bEsc\b/g,'Escape').replace(/\bNet ac\b/g,'Net acres').replace(/Oct (\d+), (\d{4})/g,'October $1, $2');
     return t.replace(/\s+/g,' ').trim(); };
-  function stopVoice(){ clearTimeout(adv); utt++; if(CanSpeak) SY.cancel(); }
-  function speakStep(){ stopVoice(); if(!playing||i<0) return; const me=utt, parts=spoken(S[i]).match(/[^.!?]+[.!?]*/g)||[];
+  function stopVoice(){ clearTimeout(adv); utt++; AUD.onended=AUD.onerror=null; try{ AUD.pause(); }catch(e){} if(HasSynth) SY.cancel(); }
+  const next=me=>{ if(me!==utt||!playing) return; adv=setTimeout(()=>{ if(me!==utt||!playing) return; if(i<S.length-1) go(i+1); else setPlay(false); },900); };
+  function speakStep(){ stopVoice(); if(!playing||i<0) return; const me=utt;
+    if(noClips) return synthStep(me);
+    AUD.onended=()=>next(me); AUD.onerror=()=>{ if(me!==utt) return; noClips=true; synthStep(me); };
+    AUD.src=clip(i); const pr=AUD.play(); if(pr&&pr.catch) pr.catch(e=>{ if(me!==utt) return; if(e&&e.name==='NotAllowedError') setPlay(false); else if(!noClips){ noClips=true; synthStep(me); } });
+    if(i<S.length-1){ const n=new Audio(); n.preload='auto'; n.src=clip(i+1); } }
+  function synthStep(me){ if(!HasSynth){ setPlay(false); return; } const parts=spoken(S[i]).match(/[^.!?]+[.!?]*/g)||[];
     // one utterance per sentence: Chrome cuts long utterances off after about 15 seconds
     parts.forEach((txt,k)=>{ const u=new SpeechSynthesisUtterance(txt.trim()); if(voice){ u.voice=voice; u.lang=voice.lang; } u.rate=1.02;
-      if(k===parts.length-1) u.onend=()=>{ if(me!==utt||!playing) return; adv=setTimeout(()=>{ if(me!==utt||!playing) return; if(i<S.length-1) go(i+1); else setPlay(false); },1100); };
+      if(k===parts.length-1) u.onend=()=>next(me);
       u.onerror=e=>{ if(me===utt&&e.error==='not-allowed') setPlay(false); };
       SY.speak(u); }); }
   function playBtn(){ const b=$('#tour-v'); if(!b) return; b.hidden=!CanSpeak; b.classList.toggle('on',playing);

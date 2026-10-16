@@ -1,0 +1,40 @@
+{
+ "pwe-iii": [
+  "Welcome to the P W E 3 dashboard. This short tour shows where everything is and how to use it. It takes about two minutes. Press Play with voice to have it narrated and move along on its own, or use Next or Back and the arrow keys, and Escape to leave at any time. You can replay it from the Tour button on the left.",
+  "Views. The rail on the left switches between the three views: the Overview, the Units and plats map, and the Records table. Home goes back to the list of PWE projects.",
+  "Filters. Everything on every view follows these filters. Pick a unit or a landowner status here. Clicking a bar, unit or owner elsewhere also adds a filter, and each one shows as a chip you can remove with the x. Clear filters resets all of them.",
+  "Headline numbers. Total net acres, leased net acres and tract counts for whatever the filters currently include. Net acres are each owner's interest, counted once per tract.",
+  "Net acres by unit. Leased (green) against unleased (amber) for each unit. Switch between Net acres and percent leased at the top right, and click a bar to filter the whole dashboard to that unit.",
+  "Overview map. Every tract, shaded by lease status. Hover a tract for a summary and click it to open it on the unit map. The legend items are buttons: click one to hide or show those tracts. Use Find a tract or owner to jump straight to one.",
+  "Leased share. The gauge shows the share of net acres leased; the ring shows how many tracts are fully, partly or not leased.",
+  "Units table. One row per unit: plat acres, net acres, leased and unleased. Click a row to open that unit on the map with its survey plat.",
+  "Where to focus. The largest unleased tracts and owners. Click a tract to see it on the map, or an owner to see all of their records.",
+  "Units and plats. This view opens one unit at a time. Step through them with the arrow buttons, or pick one from the Unit filter at the top. Survey plat opens the recorded plat itself, which you can zoom and pan.",
+  "The map. Drag to pan and scroll, or use the plus and minus buttons, to zoom; the fit button fits back to the unit. Switch between Aerial and Map at the top left. The Abstracts button shows or hides the Texas R R C survey abstracts, and the legend items toggle tracts on and off.",
+  "Tract details. Clicking a tract (on the map or in this list) zooms to it and lists every owner with their net acres, status and lease. Click an owner to see the full record. Click outside the tract, press Escape or use Back to zoom out to the unit again.",
+  "Records. Every owner interest, one row each, with the same columns as the Mapper export. Search by tract, owner, contract number or lessee; the counts update as you type.",
+  "Sort and open. Click a column header to sort (click again to reverse). Click any row for a detail panel with the lease terms and a Show on map button.",
+  "Export to Excel. Downloads the rows currently shown (after filters and search) as a formatted Excel table with filter buttons on every column.",
+  "Light or dark. Switch the color theme here; the dashboard remembers your choice.",
+  "You're all set. That's the whole dashboard. Replay this tour any time from the Tour button on the left. Data: P W E 3 Mapper export, October 14, 2026."
+ ],
+ "pwe-iv": [
+  "Welcome to the P W E 4 dashboard. This short tour shows where everything is and how to use it. It takes about two minutes. Press Play with voice to have it narrated and move along on its own, or use Next or Back and the arrow keys, and Escape to leave at any time. You can replay it from the Tour button on the left.",
+  "Views. The rail on the left switches between the three views: the Overview, the Townships and map map, and the Records table. Home goes back to the list of PWE projects.",
+  "Filters. Everything on every view follows these filters. Pick a township or a landowner status here. Clicking a bar, township or owner elsewhere also adds a filter, and each one shows as a chip you can remove with the x. Clear filters resets all of them.",
+  "Headline numbers. Total net acres, leased net acres and tract counts for whatever the filters currently include. Net acres are each owner's interest, counted once per tract.",
+  "Net acres by township. Leased (green) against unleased (amber) for each township. Switch between Net acres and percent leased at the top right, and click a bar to filter the whole dashboard to that township.",
+  "Overview map. Every tract, shaded by lease status. Hover a tract for a summary and click it to open it on the township map. The legend items are buttons: click one to hide or show those tracts. Use Find a tract or owner to jump straight to one.",
+  "Leased share. The gauge shows the share of net acres leased; the ring shows how many tracts are fully, partly or not leased.",
+  "Townships table. One row per township: tract acres, net acres, leased and unleased. Click a row to open that township on the map.",
+  "Where to focus. The largest unleased tracts and owners. Click a tract to see it on the map, or an owner to see all of their records.",
+  "Townships and map. This view opens one township at a time. Step through them with the arrow buttons, or pick one from the Township filter at the top.",
+  "The map. Drag to pan and scroll, or use the plus and minus buttons, to zoom; the fit button fits back to the township. Switch between Aerial and Map at the top left. The S T R grid button shows or hides the section-township-range lines from Sonris, and the legend items toggle tracts on and off.",
+  "Tract details. Clicking a tract (on the map or in this list) zooms to it and lists every owner with their net acres, status and lease. Click an owner to see the full record. Click outside the tract, press Escape or use Back to zoom out to the township again.",
+  "Records. Every owner interest, one row each, with the same columns as the Mapper export. Search by tract, owner, contract number or lessee; the counts update as you type.",
+  "Sort and open. Click a column header to sort (click again to reverse). Click any row for a detail panel with the lease terms and a Show on map button.",
+  "Export to Excel. Downloads the rows currently shown (after filters and search) as a formatted Excel table with filter buttons on every column.",
+  "Light or dark. Switch the color theme here; the dashboard remembers your choice.",
+  "You're all set. That's the whole dashboard. Replay this tour any time from the Tour button on the left. Data: P W E 4 Mapper export, October 15, 2026."
+ ]
+}
