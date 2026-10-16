@@ -56,7 +56,7 @@ key, out = sys.argv[1], sys.argv[2]
 home, standalone = '--home' in sys.argv, '--standalone' in sys.argv
 P = PROJECTS[key]
 t = open('v3/shell.html').read()
-for k in ['prep', 'board', 'goal', 'notes', 'map', 'rest', 'tour']:
+for k in ['prep', 'board', 'goal', 'notes', 'map', 'rest']:
     t = t.replace(f'/*__{k.upper()}__*/', open(f'v3/_{k}.js').read())
 t = t.replace('/*__PLATS__*/', open(P['plats']).read())
 for k in ['CODE', 'REGION', 'DATE_S', 'DATE_L', 'ACRESRC']:
@@ -69,6 +69,8 @@ for a, b in P['words']:
     n = t.count(a)
     assert n >= 1, f'{key}: wording not found: {a!r}'
     t = t.replace(a, b)
+# the guided tour is shared by every project, so it goes in after the per-project wording swaps
+t = t.replace('/*__TOUR__*/', open('v3/_tour.js').read())
 t = (t.replace('/*__LOGO__*/', open('v3/_logo.txt').read())
       .replace('/*__SEGLOGO__*/', open('v3/_seglogo.txt').read())
       .replace('/*__DATA__*/[]', open(P['data']).read())

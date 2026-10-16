@@ -98,7 +98,7 @@ tokens = shell[shell.index(':root{'):shell.index('*{box-sizing:border-box}')]
 logo = open('v3/_logo.txt').read(); seg = open('v3/_seglogo.txt').read()
 latest = 'October 15, 2026'
 _q = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M8 5.5v13l10.5-6.5z"/></svg>'
-tourbtns = ''.join(f'<a class="tgo{"" if k==0 else " alt"}" href="{p["key"]}/?tour">{_q}Tour {p["code"]}</a>' for k,p in enumerate(PROJECTS))
+tourbtns = f'<a class="tgo" href="{PROJECTS[0]["key"]}/?tour">{_q}Take the tour</a>'  # one tour for every project; it runs on the first project's page
 html = f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PWE Dashboard</title>
@@ -164,7 +164,7 @@ dd small{{font:500 11px var(--f-b);color:var(--text-lo);margin-left:3px}}
       <div class="hcol"><img class="seglogo" src="{seg}" alt="Schoeffler Energy Group" title="Prepared by Schoeffler Energy Group"><div class="datepill">{latest}</div></div></div>
   </header>
   <section class="tourband" aria-label="Guided tour">
-    <div><b>New to the dashboard?</b><p>Take a two-minute guided tour. It walks you through each view, the map and the records, right on the live dashboard.</p></div>
+    <div><b>New to the dashboard?</b><p>Take a two-minute guided tour. It walks you through each view, the map and the records, right on the live dashboard, and the same steps work on every PWE project.</p></div>
     <div class="tacts">{tourbtns}</div>
   </section>
   <main class="grid">{''.join(cards)}

@@ -1,10 +1,10 @@
 """Record the guided-tour narration with the Kokoro-82M neural voice (runs offline).
 
 usage: python3 build_tour_audio.py <scripts.json> <model.onnx> <voices.npz> <site_root> [voice]   (STEPS=1,2 env var: only those steps)
-  scripts.json  {"pwe-iii": [step texts], "pwe-iv": [...]} pulled from TOUR.spoken(k) in each page
+  scripts.json  [step texts] pulled from TOUR.spoken(k) on either page (the tour is the same on every project)
   model.onnx    Kokoro-82M v1.0 q8 (npm kokoro-q8-shards, joined; sha256 fbae9257…a1478)
   voices.npz    voice styles from npm kokoro-js voices/*.bin (510x1x256 float32 each)
-Writes <site_root>/<project>/tour/NN.mp3 (mono, 48 kbps).
+Writes <site_root>/tour/NN.mp3 (mono, 48 kbps), shared by every project page.
 """
 import json, re, subprocess, sys, os
 import soundfile as sf, numpy as np
@@ -22,11 +22,12 @@ def tune(t):
     t = t.replace('P W E 3', 'Pine Wave Three').replace('P W E 4', 'Pine Wave Four').replace('PWE', 'Pine Wave').replace('S T R', 'S.T.R.').replace('R R C', 'R.R.C.')
     t = t.replace('(green)', ', in green,').replace('(amber)', ', in amber,').replace('(click again to reverse)', ', and click again to reverse it')
     t = t.replace('(after filters and search)', ', after filters and search,').replace('(on the map or in this list)', ', on the map or in this list,')
-    t = re.sub(r' ,', ',', t)
+    t = re.sub(r'\s*\(([^)]*)\)', r', \1,', t)  # any other aside in brackets becomes a spoken pause
+    t = re.sub(r' ,', ',', t).replace(',,', ',').replace(',.', '.')
     return t
 
-for proj, steps in json.load(open(scripts)).items():
-    out = os.path.join(root, proj, 'tour'); os.makedirs(out, exist_ok=True)
+out = os.path.join(root, 'tour'); os.makedirs(out, exist_ok=True)
+for proj, steps in [('tour', json.load(open(scripts)))]:
     for n, text in enumerate(steps, 1):
         if only and str(n) not in only.split(','): continue
         a, sr = k.create(tune(text), voice=voice, speed=1.0, lang='en-us')

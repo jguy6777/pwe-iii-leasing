@@ -2,36 +2,37 @@
 // A step-by-step walkthrough of the real page: dims everything, spotlights one part at a time,
 // and switches tabs / opens a unit along the way. Started by the rail's Tour button or ?tour in the URL.
 const TOUR=(function(){
-  const IV=/Township/.test($('#tab-un').textContent), U=IV?'township':'unit', Us=U+'s', Uc=IV?'Township':'Unit';
-  const hasPlats=Object.keys(PLATDOCS).length>0, grid=IV?'STR grid':'Abstracts';
+  // One tour for every PWE project: the wording (and the recorded narration in /tour/) is the same on each page,
+  // so it names both groupings — PWE III's gas units with survey plats and PWE IV's townships — instead of switching words per page.
+  const G='unit or township';
   const pickUnit=()=>{ const c={}; DATA.forEach(r=>{ if(r.unitL&&r.unitL!==OUT) c[r.unitL]=(c[r.unitL]||0)+1; });
     return UNITS.filter(u=>c[u]).sort((a,b)=>c[b]-c[a])[0]||UNITS[0]; };
   const pickTract=()=>{ const ids=[...new Set(DATA.filter(r=>r.unitL===state.unit).map(r=>r.id))].filter(id=>TSTAT[id]&&GEO.t.some(g=>g.id===id));
     return ids.sort((a,b)=>TSTAT[b].t-TSTAT[a].t)[0]; };
   const toTab=t=>{ if(curTab!==t) setTab(t); };
   const S=[
-    {t:'Welcome to the %%CODE%% dashboard', b:`This short tour shows where everything is and how to use it. It takes about two minutes.<br><br>Press <b>Play with voice</b> to have it narrated and move along on its own, or use <b>Next</b> / <b>Back</b> and the arrow keys, and <b>Esc</b> to leave at any time. You can replay it from the <b>Tour</b> button on the left.`},
-    {sel:'.rail', side:'right', pre:()=>toTab('ov'), t:'Views', b:`The rail on the left switches between the three views: the <b>Overview</b>, the <b>${IV?'Townships &amp; map':'Units &amp; plats'}</b> map, and the <b>Records</b> table. ${$('.rail a.nav')?'<b>Home</b> goes back to the list of PWE projects.':''}`},
-    {sel:'.bar', side:'bottom', pre:()=>toTab('ov'), t:'Filters', b:`Everything on every view follows these filters. Pick a ${U} or a landowner status here. Clicking a bar, ${U} or owner elsewhere also adds a filter, and each one shows as a chip you can remove with <b>×</b>. <b>Clear filters</b> resets all of them.`},
+    {t:'Welcome to the PWE Dashboard', b:`This short tour shows where everything is and how to use it. It takes about two minutes, and it works the same way on every PWE project: PWE III groups its tracts into gas units with survey plats, and PWE IV groups them by township until its units are set.<br><br>Press <b>Play with voice</b> to have it narrated and move along on its own, or use <b>Next</b> / <b>Back</b> and the arrow keys, and <b>Esc</b> to leave at any time. You can replay it from the <b>Tour</b> button on the left.`},
+    {sel:'.rail', side:'right', pre:()=>toTab('ov'), t:'Views', b:`The rail on the left switches between the three views: the <b>Overview</b>, the map view (<b>Units &amp; plats</b> on PWE III, <b>Townships &amp; map</b> on PWE IV), and the <b>Records</b> table. <b>Home</b> goes back to the list of PWE projects.`},
+    {sel:'.bar', side:'bottom', pre:()=>toTab('ov'), t:'Filters', b:`Everything on every view follows these filters. Pick a ${G} or a landowner status here. Clicking a bar, a ${G} or an owner elsewhere also adds a filter, and each one shows as a chip you can remove with <b>×</b>. <b>Clear filters</b> resets all of them.`},
     {sel:'#kpis-l', side:'right', pre:()=>toTab('ov'), t:'Headline numbers', b:`Total net acres, leased net acres and tract counts for whatever the filters currently include. Net acres are each owner's interest, counted once per tract.`},
-    {sel:()=>$('#ubars').closest('.c'), side:'right', t:`Net acres by ${U}`, b:`Leased (green) against unleased (amber) for each ${U}. Switch between <b>Net ac</b> and <b>% leased</b> at the top right, and click a bar to filter the whole dashboard to that ${U}.`},
-    {sel:'.mapc', side:'left', pre:()=>toTab('ov'), t:'Overview map', b:`Every tract, shaded by lease status. Hover a tract for a summary and click it to open it on the ${IV?'township':'unit'} map.<br><br>The legend items are buttons: click one to hide or show those tracts. Use <b>Find a tract or owner</b> to jump straight to one.`},
+    {sel:()=>$('#ubars').closest('.c'), side:'right', t:'Net acres chart', b:`Leased (green) against unleased (amber) for each ${G}. Switch between <b>Net ac</b> and <b>% leased</b> at the top right, and click a bar to filter the whole dashboard to that ${G}.`},
+    {sel:'.mapc', side:'left', pre:()=>toTab('ov'), t:'Overview map', b:`Every tract, shaded by lease status. Hover a tract for a summary and click it to open it in the map view.<br><br>The legend items are buttons: click one to hide or show those tracts. Use <b>Find a tract or owner</b> to jump straight to one.`},
     {sel:'.col.right', side:'left', t:'Leased share', b:`The gauge shows the share of net acres leased; the ring shows how many tracts are fully, partly or not leased.`},
-    {sel:()=>$('#sb').closest('.c'), side:'top', t:`${Uc}s table`, b:`One row per ${U}: ${hasPlats?'plat acres':'tract acres'}, net acres, leased and unleased. Click a row to open that ${U} on the map${hasPlats?' with its survey plat':''}.`},
+    {sel:()=>$('#sb').closest('.c'), side:'top', t:'Summary table', b:`One row per ${G}: total acres (from the survey plats on PWE III), net acres, leased and unleased. Click a row to open it in the map view.`},
     {sel:'.work2', side:'top', t:'Where to focus', b:`The largest unleased tracts and owners. Click a tract to see it on the map, or an owner to see all of their records.`},
-    {sel:'#uhead', side:'right', pre:()=>{ setUnit(pickUnit()); toTab('un'); }, t:`${IV?'Townships &amp; map':'Units &amp; plats'}`, b:`This view opens one ${U} at a time. Step through them with <b>‹</b> and <b>›</b>, or pick one from the ${Uc} filter at the top.${hasPlats?' <b>Survey plat</b> opens the recorded plat itself, which you can zoom and pan.':''}`},
-    {sel:'.pbox', side:'left', t:'The map', b:`Drag to pan and scroll (or <b>+</b> / <b>−</b>) to zoom; <b>⤢</b> fits back to the ${U}.<br><br>Switch between <b>Aerial</b> and <b>Map</b> at the top left. The <b>${grid}</b> button shows or hides the ${IV?'section-township-range lines from SONRIS':'Texas RRC survey abstracts'}, and the legend items toggle tracts on and off.`},
-    {sel:'#pside', side:'left', pre:()=>{ const t=pickTract(); if(t&&PL.tract!==t){ PL.tract=t; renderPlat(); zoomTract(t); } }, t:'Tract details', b:`Clicking a tract (on the map or in this list) zooms to it and lists every owner with their net acres, status and lease. Click an owner to see the full record.<br><br>Click outside the tract, press <b>Esc</b> or use <b>Back</b> to zoom out to the ${U} again.`},
+    {sel:'#uhead', side:'right', pre:()=>{ setUnit(pickUnit()); toTab('un'); }, t:'Map view', b:`This view opens one ${G} at a time. Step through them with <b>‹</b> and <b>›</b>, or pick one from the filter at the top. On PWE III, <b>Survey plat</b> opens the recorded plat itself, which you can zoom and pan.`},
+    {sel:'.pbox', side:'left', t:'The map', b:`Drag to pan and scroll (or <b>+</b> / <b>−</b>) to zoom; <b>⤢</b> fits back to the ${G}.<br><br>Switch between <b>Aerial</b> and <b>Map</b> at the top left. The overlay button shows or hides survey lines: <b>Abstracts</b> on PWE III and the <b>STR grid</b> from SONRIS on PWE IV. The legend items toggle tracts on and off.`},
+    {sel:'#pside', side:'left', pre:()=>{ const t=pickTract(); if(t&&PL.tract!==t){ PL.tract=t; renderPlat(); zoomTract(t); } }, t:'Tract details', b:`Clicking a tract (on the map or in this list) zooms to it and lists every owner with their net acres, status and lease. Click an owner to see the full record.<br><br>Click outside the tract, press <b>Esc</b> or use <b>Back</b> to zoom out to the ${G} again.`},
     {sel:'.llbar', side:'bottom', pre:()=>{ if(PL.tract) unselectTract(); toTab('ll'); }, t:'Records', b:`Every owner interest, one row each, with the same columns as the Mapper export. Search by tract, owner, contract no. or lessee; the counts update as you type.`},
     {sel:'#ll', side:'top', t:'Sort and open', b:`Click a column header to sort (click again to reverse). Click any row for a detail panel with the lease terms and a <b>Show on map</b> button.`},
     {sel:'#copy', side:'bottom', t:'Export to Excel', b:`Downloads the rows currently shown (after filters and search) as a formatted Excel table with filter buttons on every column.`},
     {sel:'#theme', side:'right', pre:()=>toTab('ov'), t:'Light or dark', b:`Switch the color theme here; the dashboard remembers your choice.`},
-    {t:`You're all set`, b:`That's the whole dashboard. Replay this tour any time from the <b>Tour</b> button on the left.<br><br>Data: %%CODE%% Mapper export, %%DATE_S%%.`},
+    {t:`You're all set`, b:`That's the whole dashboard, and the same steps work on every PWE project. Replay this tour any time from the <b>Tour</b> button on the left. The date at the top right shows which Mapper export the numbers come from.`},
   ];
   let i=-1, saved=null, el=null, hole=null, raf=0;
-  // ----- narration: recorded neural-voice clips (tour/NN.mp3, from build_tour_audio.py) read each step and move on by themselves;
+  // ----- narration: recorded neural-voice clips (/tour/NN.mp3 at the site root, shared by every project; from build_tour_audio.py) read each step and move on by themselves;
   //       if a clip can't load (e.g. a single-file copy) the browser's own speech voice reads that step instead -----
-  const SY=window.speechSynthesis, HasSynth=!!(SY&&window.SpeechSynthesisUtterance), CanSpeak=true, AUD=new Audio(), clip=k=>`tour/${String(k+1).padStart(2,'0')}.mp3?v=3`;
+  const SY=window.speechSynthesis, HasSynth=!!(SY&&window.SpeechSynthesisUtterance), CanSpeak=true, AUD=new Audio(), clip=k=>`/tour/${String(k+1).padStart(2,'0')}.mp3?v=4`;
   let noClips=false; AUD.preload='auto';
   let playing=false, voice=null, utt=0, adv=0;
   const pickVoice=()=>{ if(!HasSynth) return null; const v=SY.getVoices(), en=v.filter(x=>/^en[-_]US/i.test(x.lang)), any=v.filter(x=>/^en/i.test(x.lang));
