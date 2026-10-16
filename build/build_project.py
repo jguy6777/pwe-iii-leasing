@@ -56,7 +56,7 @@ key, out = sys.argv[1], sys.argv[2]
 home, standalone = '--home' in sys.argv, '--standalone' in sys.argv
 P = PROJECTS[key]
 t = open('v3/shell.html').read()
-for k in ['prep', 'board', 'goal', 'notes', 'map', 'rest']:
+for k in ['prep', 'board', 'goal', 'notes', 'map', 'rest', 'tour']:
     t = t.replace(f'/*__{k.upper()}__*/', open(f'v3/_{k}.js').read())
 t = t.replace('/*__PLATS__*/', open(P['plats']).read())
 for k in ['CODE', 'REGION', 'DATE_S', 'DATE_L', 'ACRESRC']:

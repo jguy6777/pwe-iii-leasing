@@ -97,6 +97,8 @@ shell = open('v3/shell.html').read()
 tokens = shell[shell.index(':root{'):shell.index('*{box-sizing:border-box}')]
 logo = open('v3/_logo.txt').read(); seg = open('v3/_seglogo.txt').read()
 latest = 'October 15, 2026'
+_q = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M8 5.5v13l10.5-6.5z"/></svg>'
+tourbtns = ''.join(f'<a class="tgo{"" if k==0 else " alt"}" href="{p["key"]}/?tour">{_q}Tour {p["code"]}</a>' for k,p in enumerate(PROJECTS))
 html = f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PWE Dashboard</title>
@@ -142,6 +144,14 @@ dd small{{font:500 11px var(--f-b);color:var(--text-lo);margin-left:3px}}
 .sw{{width:9px;height:9px;border-radius:2px;display:inline-block}}
 .pnote{{margin:0;font-size:12px;color:var(--text-lo)}}
 .open{{margin-top:auto;align-self:flex-start;font:600 13px var(--f-b);color:var(--nav-on-fg);background:var(--nav-on);border-radius:10px;padding:9px 14px}}
+.tourband{{display:flex;flex-wrap:wrap;align-items:center;gap:14px 20px;justify-content:space-between;background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--wave);border-radius:14px;padding:14px 18px;margin-bottom:20px;box-shadow:var(--shadow)}}
+.tourband b{{display:block;font:600 16px var(--f-d);color:var(--pine-ink)}}
+.tourband p{{margin:2px 0 0;font-size:13px;color:var(--text-mid)}}
+.tacts{{display:flex;flex-wrap:wrap;gap:10px}}
+.tgo{{display:inline-flex;align-items:center;gap:8px;font:600 13px var(--f-b);color:var(--nav-on-fg);background:var(--nav-on);border-radius:10px;padding:9px 14px;text-decoration:none}}
+.tgo.alt{{background:var(--panel);color:var(--pine-ink);border:1px solid var(--border)}}
+.tgo:hover{{filter:brightness(1.08)}}
+.tgo svg{{width:16px;height:16px}}
 .foot{{margin-top:26px;text-align:center;font:500 11px var(--f-m);color:var(--text-lo)}}
 @media (max-width:560px){{.wrap{{padding:16px 16px 40px}}.cbody{{grid-template-columns:1fr}}.mini{{height:170px}}.ctop{{flex-direction:column}}.big{{text-align:left}}.datepill{{display:none}}}}
 </style></head>
@@ -153,6 +163,10 @@ dd small{{font:500 11px var(--f-b);color:var(--text-lo);margin-left:3px}}
     <div class="hside"><button class="tbtn" type="button" id="theme">Dark</button>
       <div class="hcol"><img class="seglogo" src="{seg}" alt="Schoeffler Energy Group" title="Prepared by Schoeffler Energy Group"><div class="datepill">{latest}</div></div></div>
   </header>
+  <section class="tourband" aria-label="Guided tour">
+    <div><b>New to the dashboard?</b><p>Take a two-minute guided tour. It walks you through each view, the map and the records, right on the live dashboard.</p></div>
+    <div class="tacts">{tourbtns}</div>
+  </section>
   <main class="grid">{''.join(cards)}
   </main>
   <p class="foot">status = LEASING_STATUS · acres = NET_AC · each owner interest counted once per tract</p>

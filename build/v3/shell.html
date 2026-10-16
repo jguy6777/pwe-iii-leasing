@@ -381,6 +381,24 @@ td.r{font-family:var(--f-m);font-size:12px}
   .logo{height:48px}
   .gauge,.donut{flex-wrap:wrap}
 }
+/* guided tour */
+.tour{position:fixed;inset:0;z-index:5000}
+.tour[hidden]{display:none}
+.tour-hole{position:fixed;border-radius:14px;box-shadow:0 0 0 2px var(--wave),0 0 0 9999px rgba(10,18,14,.58);transition:left .3s ease,top .3s ease,width .3s ease,height .3s ease;pointer-events:none}
+.tour-hole.none{box-shadow:0 0 0 9999px rgba(10,18,14,.58)}
+.tour-card{position:fixed;background:var(--panel);color:var(--text-hi);border:1px solid var(--border);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.28);padding:18px 18px 14px;transition:left .3s ease,top .3s ease}
+.tour-step{font:500 10.5px var(--f-m);letter-spacing:.04em;text-transform:uppercase;color:var(--wave)}
+.tour-card h3{margin:4px 0 8px;font:600 18px/1.25 var(--f-d);color:var(--pine-ink)}
+.tour-b{font-size:13.5px;line-height:1.55;color:var(--text-mid)}
+.tour-b b{color:var(--text-hi);font-weight:600}
+.tour-dots{display:flex;flex-wrap:wrap;gap:5px;margin:14px 0 12px}
+.tour-dots button{width:8px;height:8px;padding:0;border:0;border-radius:50%;background:var(--border);cursor:pointer}
+.tour-dots button.on{background:var(--wave);width:20px;border-radius:4px}
+.tour-ft{display:flex;align-items:center;gap:8px}
+.tour-ft span{flex:1}
+.tour-ft #tour-x{border:0;background:transparent;padding-left:0;color:var(--text-lo)}
+.tour-ft #tour-x:hover{color:var(--text-hi)}
+@media (prefers-reduced-motion:reduce){.tour-hole,.tour-card{transition:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -391,6 +409,7 @@ td.r{font-family:var(--f-m);font-size:12px}
     <button class="nav" role="tab" id="tab-ll" aria-controls="pane-ll"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Records<small id="llct"></small></button>
     <hr>
     <button class="nav" type="button" id="theme" aria-label="Switch color theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span id="theme-l">Dark</span></button>
+    <button class="nav" type="button" id="tour" title="Take a guided tour of this dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17.2h.01"/></svg>Tour</button>
   </nav>
 
   <div class="main">
@@ -648,4 +667,5 @@ render();
 let st='ov'; if(location.hash==='#records') st='ll'; else if(location.hash==='#units'||location.hash==='#plats') st='un';
 setTab(st);
 requestAnimationFrame(fitKeyBox); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>requestAnimationFrame(fitKeyBox));
+/*__TOUR__*/
 </script>
