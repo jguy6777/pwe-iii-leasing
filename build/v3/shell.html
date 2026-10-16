@@ -469,12 +469,7 @@ td.r{font-family:var(--f-m);font-size:12px}
           <div class="ch"><div><h2>Units</h2><div class="sub">Plat acres vs net acres · click a unit to open it with its plat</div></div></div>
           <div class="tblwrap"><table id="sb"></table></div>
         </div>
-        <div class="work2">
-          <div class="c"><div class="ch"><div><h2>Largest unleased tracts</h2><div class="sub" id="wt-sub"></div></div></div><div class="olist" id="w-tracts"></div></div>
-          <div class="c"><div class="ch"><div><h2>Largest unleased owners</h2><div class="sub">Unleased net acres · click to see their records</div></div></div><div class="olist" id="w-owners"></div></div>
-        </div>
       </div>
-      <ul class="notes" id="notes"></ul>
       <p class="foot">Source: %%CODE%% Mapper Export, %%DATE_S%% · status = LEASING_STATUS · acres = NET_AC · %%ACRESRC%%</p>
     </section>
 
@@ -591,6 +586,7 @@ function renderDonut(){
 }
 
 function renderLists(){
+  if(!$('#w-tracts')) return; // the "Largest unleased tracts / owners" section was removed from the Overview
   const all=scope(filtered({noLs:true}));
   const ids=[...new Set(all.map(r=>r.id))].map(id=>({id,S:TSTAT[id]})).filter(x=>x.S.t-x.S.l>1e-6).sort((a,b)=>(b.S.t-b.S.l)-(a.S.t-a.S.l));
   $('#wt-sub').textContent=`${fmt(ids.length)} tracts · ${fmt(ids.reduce((a,x)=>a+x.S.t-x.S.l,0),2)} unleased ac · click to open on the plat`;
@@ -668,7 +664,7 @@ $('#ll-ov').onclick=()=>setTab('ov'); $('#ll-un').onclick=()=>setTab('un');
   try{ const s=localStorage.getItem('pwe-theme'); if(s==='light'||s==='dark') root.setAttribute('data-theme',s); }catch(e){}
   lab(); mq.addEventListener&&mq.addEventListener('change',lab);
   $('#theme').onclick=()=>{ const n=cur()==='light'?'dark':'light'; root.setAttribute('data-theme',n); try{ localStorage.setItem('pwe-theme',n); }catch(e){} lab(); }; })();
-renderNotes();
+// renderNotes(); notes under the Overview were removed
 render();
 // always open on the Overview; a #records or #units link can still deep-link a tab
 let st='ov'; if(location.hash==='#records') st='ll'; else if(location.hash==='#units'||location.hash==='#plats') st='un';

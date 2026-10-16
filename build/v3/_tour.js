@@ -22,7 +22,6 @@ const TOUR=(function(){
     {sel:'.mapc', pre:onOv, side:'left', t:'Overview map', b:`Every tract, shaded by lease status. Hover a tract for a summary and click it to open it in the map view.<br><br>The legend items are buttons: click one to hide or show those tracts. Use <b>Find a tract or owner</b> to jump straight to one.`},
     {sel:'.col.right', pre:onOv, side:'left', t:'Leased share', b:`The gauge shows the share of net acres leased; the ring shows how many tracts are fully, partly or not leased.`},
     {sel:()=>$('#sb').closest('.c'), pre:onOv, side:'top', t:'Summary table', b:`One row per ${G}: total acres (from the survey plats on PWE III), net acres, leased and unleased. Click a row to open it in the map view.`},
-    {sel:'.work2', pre:onOv, side:'top', t:'Where to focus', b:`The largest unleased tracts and owners. Click a tract to see it on the map, or an owner to see all of their records.`},
     {sel:'#uhead', side:'right', pre:()=>{ if(PL.tract) unselectTract(); setUnit(pickUnit()); toTab('un'); }, t:'Map view', b:`This view opens one ${G} at a time. Step through them with <b>‹</b> and <b>›</b>, or pick one from the filter at the top. On PWE III, <b>Survey plat</b> opens the recorded plat itself, which you can zoom and pan.`},
     {sel:'.pbox', pre:()=>onUn(), side:'left', t:'The map', b:`Drag to pan and scroll (or <b>+</b> / <b>−</b>) to zoom; <b>⤢</b> fits back to the ${G}.<br><br>Switch between <b>Aerial</b> and <b>Map</b> at the top left. The overlay button shows or hides survey lines: <b>Abstracts</b> on PWE III and the <b>STR grid</b> from SONRIS on PWE IV. The legend items toggle tracts on and off.`},
     {sel:'#pside', side:'left', pre:()=>{ onUn(true); const t=pickTract(); if(t&&PL.tract!==t){ PL.tract=t; renderPlat(); zoomTract(t); } }, t:'Tract details', b:`Clicking a tract (on the map or in this list) zooms to it and lists every owner with their net acres, status and lease. Click an owner to see the full record.<br><br>Click outside the tract, press <b>Esc</b> or use <b>Back</b> to zoom out to the ${G} again.`},
@@ -35,7 +34,7 @@ const TOUR=(function(){
   let i=-1, saved=null, el=null, hole=null, raf=0;
   // ----- narration: recorded neural-voice clips (/tour/NN.mp3 at the site root, shared by every project; from build_tour_audio.py) read each step and move on by themselves;
   //       if a clip can't load (e.g. a single-file copy) the browser's own speech voice reads that step instead -----
-  const SY=window.speechSynthesis, HasSynth=!!(SY&&window.SpeechSynthesisUtterance), CanSpeak=true, AUD=new Audio(), clip=k=>`/tour/${String(k+1).padStart(2,'0')}.mp3?v=4`;
+  const SY=window.speechSynthesis, HasSynth=!!(SY&&window.SpeechSynthesisUtterance), CanSpeak=true, AUD=new Audio(), clip=k=>`/tour/${String(k+1).padStart(2,'0')}.mp3?v=5`;
   let noClips=false; AUD.preload='auto';
   let playing=false, voice=null, utt=0, adv=0;
   const pickVoice=()=>{ if(!HasSynth) return null; const v=SY.getVoices(), en=v.filter(x=>/^en[-_]US/i.test(x.lang)), any=v.filter(x=>/^en/i.test(x.lang));

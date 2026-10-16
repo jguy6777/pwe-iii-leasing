@@ -144,7 +144,7 @@ dd small{{font:500 11px var(--f-b);color:var(--text-lo);margin-left:3px}}
 .sw{{width:9px;height:9px;border-radius:2px;display:inline-block}}
 .pnote{{margin:0;font-size:12px;color:var(--text-lo)}}
 .open{{margin-top:auto;align-self:flex-start;font:600 13px var(--f-b);color:var(--nav-on-fg);background:var(--nav-on);border-radius:10px;padding:9px 14px}}
-.tourband{{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px 20px;background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--wave);border-radius:14px;padding:14px 18px;margin-bottom:20px;box-shadow:var(--shadow)}}
+.tourband{{display:grid;grid-template-columns:minmax(0,1fr);align-items:center;gap:14px 20px;background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--wave);border-radius:14px;padding:14px 18px;margin-bottom:20px;box-shadow:var(--shadow)}}
 .tourband b{{display:block;font:600 16px var(--f-d);color:var(--pine-ink)}}
 .tourband p{{margin:2px 0 0;font-size:13px;color:var(--text-mid)}}
 .tacts{{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}}
@@ -153,7 +153,6 @@ dd small{{font:500 11px var(--f-b);color:var(--text-lo);margin-left:3px}}
 .tgo:hover{{filter:brightness(1.08)}}
 .tgo svg{{width:16px;height:16px}}
 .foot{{margin-top:26px;text-align:center;font:500 11px var(--f-m);color:var(--text-lo)}}
-@media (max-width:900px){{.tourband{{grid-template-columns:1fr}}}}
 @media (max-width:560px){{.wrap{{padding:16px 16px 40px}}.cbody{{grid-template-columns:1fr}}.mini{{height:170px}}.ctop{{flex-direction:column}}.big{{text-align:left}}.datepill{{display:none}}}}
 </style></head>
 <body>

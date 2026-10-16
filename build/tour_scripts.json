@@ -7,7 +7,6 @@
  "Overview map. Every tract, shaded by lease status. Hover a tract for a summary and click it to open it in the map view. The legend items are buttons: click one to hide or show those tracts. Use Find a tract or owner to jump straight to one.",
  "Leased share. The gauge shows the share of net acres leased; the ring shows how many tracts are fully, partly or not leased.",
  "Summary table. One row per unit or township: total acres (from the survey plats on Pine Wave 3), net acres, leased and unleased. Click a row to open it in the map view.",
- "Where to focus. The largest unleased tracts and owners. Click a tract to see it on the map, or an owner to see all of their records.",
  "Map view. This view opens one unit or township at a time. Step through them with the arrow buttons, or pick one from the filter at the top. On Pine Wave 3, Survey plat opens the recorded plat itself, which you can zoom and pan.",
  "The map. Drag to pan and scroll, or use the plus and minus buttons, to zoom; the fit button fits back to the unit or township. Switch between Aerial and Map at the top left. The overlay button shows or hides survey lines: Abstracts on Pine Wave 3 and the S T R grid from Sonris on Pine Wave 4. The legend items toggle tracts on and off.",
  "Tract details. Clicking a tract (on the map or in this list) zooms to it and lists every owner with their net acres, status and lease. Click an owner to see the full record. Click outside the tract, press Escape or use Back to zoom out to the unit or township again.",
