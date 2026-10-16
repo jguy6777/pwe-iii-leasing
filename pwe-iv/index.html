@@ -864,6 +864,11 @@ td.r{font-family:var(--f-m);font-size:12px}
 .pdoc{border:1px solid var(--border);background:var(--panel);color:var(--wave);cursor:pointer;padding:3px 9px;border-radius:8px;display:inline-flex;align-items:center;gap:5px;font:600 11.5px var(--f-b)}
 .pdoc:hover{border-color:var(--wave);box-shadow:0 0 0 3px var(--wave-soft)}
 .pdoc svg{width:14px;height:14px}
+.lbtns{display:flex;flex-wrap:wrap;gap:6px}
+.lnone{font-size:12px;color:var(--text-lo)}
+.lmiss{border-style:dashed;color:var(--text-lo);cursor:default}
+.lmiss:hover{box-shadow:none;border-color:var(--border)}
+.dvmsg{position:absolute;inset:0;display:grid;place-items:center;font:500 13px var(--f-b);color:var(--text-mid);pointer-events:none}
 .olist{display:grid;gap:2px}
 .orow{border:0;background:transparent;text-align:left;cursor:pointer;border-radius:10px;padding:7px 8px;display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:10px;align-items:center;font-size:12.5px;color:var(--text-hi)}
 .orow:hover{background:var(--panel-2)}
@@ -1174,8 +1179,8 @@ td.r{font-family:var(--f-m);font-size:12px}
 
 <div class="docv" id="docv" hidden role="dialog" aria-modal="true" aria-labelledby="dv-title">
   <div class="dvh"><div><h3 id="dv-title"></h3><div class="dvs" id="dv-sub"></div></div>
-    <div class="dvc"><button class="ibtn" type="button" id="dv-out" aria-label="Zoom out">−</button><span class="zl" id="dv-z"></span><button class="ibtn" type="button" id="dv-in" aria-label="Zoom in">+</button><button class="btn" type="button" id="dv-fit">Fit page</button><button class="btn" type="button" id="dv-w">Fit width</button><button class="btn pri" type="button" id="dv-close">Close</button></div></div>
-  <div class="dvb" id="dvb"><img id="dv-img" alt="" draggable="false"></div>
+    <div class="dvc"><button class="ibtn" type="button" id="dv-out" aria-label="Zoom out">−</button><span class="zl" id="dv-z"></span><button class="ibtn" type="button" id="dv-in" aria-label="Zoom in">+</button><button class="btn" type="button" id="dv-fit">Fit page</button><button class="btn" type="button" id="dv-w">Fit width</button><a class="btn" id="dv-pdf" hidden target="_blank" rel="noopener">Open PDF</a><button class="btn pri" type="button" id="dv-close">Close</button></div></div>
+  <div class="dvb" id="dvb"><img id="dv-img" alt="" draggable="false"><div class="dvmsg" id="dv-msg" hidden></div></div>
 </div>
 <datalist id="tractlist"></datalist>
 <div id="tip" hidden></div>
@@ -1202,6 +1207,8 @@ const EXPORT_DATE='Oct 14, 2026';
 // and acreage is the export's tract acres. Add PLATCALL / PLATDOCS here once units are platted.
 const PLATCALL={};
 const OFFPLAT=new Set();
+const LEASEDOCS={}; // no lease files linked yet
+const LEASETEST=/(?!)/;
 const PLATDOCS={};
 const PLATNOTE={};
 // project notes shown under Notes on the Overview
@@ -1568,11 +1575,13 @@ function renderSide(){
       <div class="kv"><span>Tract acres</span><b>${S.tac!=null?fmt(S.tac,3):'–'}</b><span>Net acres</span><b>${fmt(S.t,3)}</b>${PLATCALL[S.unit]?`<span>On survey plat</span><b>${OFFPLAT.has(t)?'No · not in unit acres':'Yes'}</b>`:''}<span>Owner rows</span><b>${fmt(rows.length)}</b>${gt&&gt.note?`<span>Parcel note</span><b>${esc(title(gt.note))}</b>`:''}</div>
       <div class="lbl">Owners · net ac</div>
       <div class="olist">${own.map(r=>{ const g=gOf(r.g); return `<button type="button" class="orow" data-i="${r.i}"><i class="sw" style="background:var(${g.c})"></i><span class="on">${esc(r.owner)}<small>${r.lno?esc(r.lno)+' · ':''}${esc(bl(r.lesseeL))}</small></span><b>${fmt(r.dup?0:(r.cac||0),4)}</b></button>`; }).join('')}</div>
+      ${leaseList(rows)}
       <div class="acts"><button class="btn" type="button" id="ps-zoom" ${gt?'':'disabled'}>Zoom to tract</button><button class="btn pri" type="button" id="ps-ll">Open in Records</button></div>`;
     $('#ps-back').onclick=()=>unselectTract();
     $('#ps-zoom').onclick=()=>zoomTract(t);
     $('#ps-ll').onclick=()=>{ state.q=t; $('#q').value=t; setTab('ll'); render(); };
     el.querySelectorAll('.orow').forEach(b=>b.onclick=()=>openDrawer(DATA[+b.dataset.i]));
+    wireLeases(el);
     return; }
   const rows=filtered({noLs:true});
   const all=[...new Set(rows.map(r=>r.id))].map(id=>({id,S:TSTAT[id]})).sort((a,b)=>(b.S.t-b.S.l)-(a.S.t-a.S.l)||String(TNUM[a.id]||a.id).localeCompare(String(TNUM[b.id]||b.id),undefined,{numeric:true}));
@@ -1668,11 +1677,47 @@ function openDrawer(r){ const g=gOf(r.g), row=(l,v)=>(v==null||v==='')?'':`<dt>$
   $('#d-body').innerHTML=`<h4>Status</h4><dl>${row('Landowner status',`<span class="spill"><i class="sw" style="background:var(${g.c})"></i>${g.label}</span>`)}${row('Title status',esc(title(r.title)))}${row('Held by',esc(r.held))}</dl>
    <h4>Mineral owner</h4><dl>${row('Name',esc(r.owner))}${row('Owner ID',esc(r.oid))}${row('Address',esc(r.addr))}${row('Phone',esc(r.phone))}${row('Mineral interest',n(r.int,8))}${row('Net acres',n(r.nac,4)+(r.dup?' (repeat row, counted once)':''))}</dl>
    <h4>Tract</h4><button class="btn pri" type="button" id="d-map" style="margin-bottom:10px">Show on map</button><dl>${row('Tract ID',esc(r.id))}${row('Plat tract',esc(r.tn))}${row('Unit',esc(bl(r.unitL)))}${row('Abstract',esc(r.absL))}${row('County',esc(title(r.cty)))}${row('Tract acres',n(r.tac,3))}</dl>
-   ${r.lno||r.lessee?`<h4>Lease</h4><dl>${row('Contract no.',esc(r.lno))}${row('Lessor',esc(r.lessor))}${row('Current lessee',esc(r.lessee))}${row('Vol/Page',esc(r.vp))}${row('Effective',esc(mdy(r.eff)))}${row('Expires',esc(mdy(r.exp)))}${row('Term',esc(r.term))}${row('Gross acres',n(r.lgac,2))}${row('Net acres',n(r.lnac,4))}${row('Royalty',r.roy!=null?fmt(r.roy*100,2)+'%':'')}${row('Bonus / ac',r.bonus!=null?'$'+fmt(r.bonus,2):'')}</dl>`:''}`;
-  $('#d-map').onclick=()=>{ closeDrawer(); openTract(r.id); };
+   ${r.lno||r.lessee?`<h4>Lease</h4>${leaseBtn(r.lno,true)}<dl>${row('Contract no.',esc(r.lno))}${row('Lessor',esc(r.lessor))}${row('Current lessee',esc(r.lessee))}${row('Vol/Page',esc(r.vp))}${row('Effective',esc(mdy(r.eff)))}${row('Expires',esc(mdy(r.exp)))}${row('Term',esc(r.term))}${row('Gross acres',n(r.lgac,2))}${row('Net acres',n(r.lnac,4))}${row('Royalty',r.roy!=null?fmt(r.roy*100,2)+'%':'')}${row('Bonus / ac',r.bonus!=null?'$'+fmt(r.bonus,2):'')}</dl>`:''}`;
+  $('#d-map').onclick=()=>{ closeDrawer(); openTract(r.id); }; wireLeases($('#d-body'));
   $('#drawer').hidden=false; $('#scrim').hidden=false; $('#d-close').focus(); }
 const closeDrawer=()=>{ $('#drawer').hidden=true; $('#scrim').hidden=true; };
 $('#d-close').onclick=closeDrawer; $('#scrim').onclick=closeDrawer;
+
+// ---------- lease viewer ----------
+// View lease buttons (record drawer + tract panel) open the recorded lease from LEASEDOCS in the document viewer;
+// pages are drawn with pdf.js (loaded on first use) into one tall image so the plat viewer's zoom/pan works on it.
+function leaseBtn(lno,big){ if(!lno) return '';
+  if(LEASEDOCS[lno]) return `<div class="lbtns" style="margin-bottom:10px"><button class="${big?'btn pri':'pdoc'}" type="button" data-lease="${esc(lno)}">${DOCICON}<span>View lease ${esc(lno)}</span></button></div>`;
+  return LEASETEST.test(lno)?`<div class="lnone" style="margin-bottom:8px">No lease file linked yet for ${esc(lno)}</div>`:''; }
+function leaseList(rows){ const ls=[...new Set(rows.map(r=>r.lno).filter(Boolean))].sort();
+  const show=ls.filter(l=>LEASEDOCS[l]||LEASETEST.test(l)); if(!show.length) return '';
+  return `<div><div class="lbl" style="margin-bottom:6px">Leases on this tract</div><div class="lbtns">${show.map(l=>LEASEDOCS[l]
+    ?`<button class="pdoc" type="button" data-lease="${esc(l)}" data-tip="${esc(LEASEDOCS[l].sub)}">${DOCICON}<span>${esc(l)}</span></button>`
+    :`<span class="pdoc lmiss" data-tip="No lease file linked yet">${esc(l)}</span>`).join('')}</div></div>`; }
+function wireLeases(root){ (root||document).querySelectorAll('[data-lease]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); openLease(b.dataset.lease); }); }
+let PDFJS=null; const LCACHE={};
+function loadPdfJs(){ if(PDFJS) return PDFJS; const base='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+  const add=src=>new Promise((res,rej)=>{ const sc=document.createElement('script'); sc.src=src; sc.onload=res; sc.onerror=()=>rej(new Error('Could not load '+src)); document.head.appendChild(sc); });
+  PDFJS=add(base+'pdf.min.js').then(()=>add(base+'pdf.worker.min.js')).then(()=>{ pdfjsLib.GlobalWorkerOptions.workerSrc=base+'pdf.worker.min.js'; return pdfjsLib; });
+  PDFJS.catch(()=>{ PDFJS=null; }); return PDFJS; }
+async function renderLease(src){ const lib=await loadPdfJs(); const buf=await (await fetch(src)).arrayBuffer();
+  const pdf=await lib.getDocument({data:buf,isEvalSupported:false}).promise, pages=[];
+  for(let i=1;i<=pdf.numPages;i++) pages.push(await pdf.getPage(i));
+  const GAP=24, W=1500; let sc=pages.map(p=>W/p.getViewport({scale:1}).width), H=pages.reduce((h,p,i)=>h+p.getViewport({scale:sc[i]}).height+GAP,GAP);
+  if(H>30000){ const k=30000/H; sc=sc.map(x=>x*k); H=30000; }
+  const big=document.createElement('canvas'); big.width=Math.ceil(Math.max(...pages.map((p,i)=>p.getViewport({scale:sc[i]}).width)))+2*GAP; big.height=Math.ceil(H);
+  const g=big.getContext('2d'); g.fillStyle='#c9c2b6'; g.fillRect(0,0,big.width,big.height); let y=GAP;
+  for(let i=0;i<pages.length;i++){ const vp=pages[i].getViewport({scale:sc[i]}), c=document.createElement('canvas'); c.width=Math.ceil(vp.width); c.height=Math.ceil(vp.height);
+    const cx=c.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,c.width,c.height); await pages[i].render({canvasContext:cx,viewport:vp}).promise;
+    g.drawImage(c,Math.round((big.width-c.width)/2),Math.round(y)); y+=c.height+GAP; }
+  return await new Promise(res=>big.toBlob(b=>res({url:URL.createObjectURL(b),n:pdf.numPages}),'image/jpeg',.88)); }
+async function openLease(lno){ const d=LEASEDOCS[lno]; if(!d) return; DV.doc=null; DV.lease=lno;
+  const rr=DATA.find(r=>r.lno===lno); $('#dv-title').textContent=`Lease ${lno}${rr&&rr.lessor?' · '+title(rr.lessor):''}`; $('#dv-sub').textContent=d.sub;
+  const a=$('#dv-pdf'); a.href=d.src; a.hidden=false; const im=$('#dv-img'), msg=$('#dv-msg');
+  $('#docv').hidden=false; $('#dv-close').focus(); im.style.visibility='hidden'; msg.hidden=false; msg.textContent='Loading lease…';
+  try{ const r=LCACHE[lno]||(LCACHE[lno]=renderLease(d.src)); const res=await r; if(DV.lease!==lno) return;
+    im.alt=`Lease ${lno}`; im.onload=()=>{ im.style.visibility=''; msg.hidden=true; dvFit(true); }; if(im.src!==res.url) im.src=res.url; else im.onload(); }
+  catch(e){ console.error(e); delete LCACHE[lno]; if(DV.lease===lno){ msg.textContent='Could not display this lease here. Use Open PDF to view it.'; } } }
 
 // ---------- survey plat viewer ----------
 const DV={doc:null,s:1,x:0,y:0};
@@ -1681,7 +1726,7 @@ function dvApply(){ const im=$('#dv-img'); im.style.transform=`translate(${DV.x}
 function dvFit(width){ const b=$('#dvb').getBoundingClientRect(), im=$('#dv-img'), w=im.naturalWidth, h=im.naturalHeight; if(!w) return;
   DV.s=width?(b.width-32)/w:Math.min((b.width-32)/w,(b.height-32)/h); DV.x=(b.width-w*DV.s)/2; DV.y=width?16:(b.height-h*DV.s)/2; dvApply(); }
 function dvZoom(k,cx,cy){ const b=$('#dvb').getBoundingClientRect(); if(cx==null){ cx=b.width/2; cy=b.height/2; } const ns=Math.min(4,Math.max(.08,DV.s*k)); k=ns/DV.s; DV.x=cx-(cx-DV.x)*k; DV.y=cy-(cy-DV.y)*k; DV.s=ns; dvApply(); }
-function openDoc(u){ const d=PLATDOCS[u]; if(!d) return; DV.doc=u; $('#dv-title').textContent=d.title; $('#dv-sub').textContent=d.sub; const im=$('#dv-img');
+function openDoc(u){ const d=PLATDOCS[u]; if(!d) return; DV.doc=u; DV.lease=null; $('#dv-pdf').hidden=true; $('#dv-msg').hidden=true; $('#dv-title').textContent=d.title; $('#dv-sub').textContent=d.sub; const im=$('#dv-img');
   im.alt=d.title; im.onload=()=>dvFit(false); $('#docv').hidden=false; if(im.getAttribute('src')!==d.src) im.src=d.src; else requestAnimationFrame(()=>dvFit(false)); $('#dv-close').focus(); }
 const closeDoc=()=>{ $('#docv').hidden=true; };
 $('#dv-close').onclick=closeDoc; $('#dv-fit').onclick=()=>dvFit(false); $('#dv-w').onclick=()=>dvFit(true); $('#dv-in').onclick=()=>dvZoom(1.25); $('#dv-out').onclick=()=>dvZoom(1/1.25);

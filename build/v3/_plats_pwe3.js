@@ -2,6 +2,37 @@
 // Called acreage per unit from the Bowman survey plats. Tracts not on a unit's plat are left out of its unit acres.
 const PLATCALL={'CANNON GU':719.57,'DAVIS GU':658.357,'FENTON GU':670.647,'HUNT GU':686.91,'JENNIFER STEWART GU':712.503,'LOFTIS GU':640.00,'RESCH GU':641.94,'SUMMERS GU':772.598,'ZIMM GU':146.193};
 const OFFPLAT=new Set(['TX203-0075-011']);
+// Lease documents shown by the View lease buttons (pwe-iii/leases/<contract no>.pdf): recorded lease pages only.
+// Check requests, W-9s, purchase notices and title papers are removed and SSNs blacked out before a file is added here.
+const LEASEDOCS={
+  'CAN-001':{src:'leases/CAN-001.pdf',sub:'Recorded lease · Vol 3193, Pg 146 · 2 pages'},
+  'CAN-002':{src:'leases/CAN-002.pdf',sub:'Recorded lease · Vol 753, Pg 205 · 2 pages'},
+  'CAN-003':{src:'leases/CAN-003.pdf',sub:'Recorded lease · Vol 753, Pg 211 · 3 pages'},
+  'CAN-004':{src:'leases/CAN-004.pdf',sub:'Recorded lease · Vol 783, Pg 457 · 2 pages'},
+  'CAN-005':{src:'leases/CAN-005.pdf',sub:'Recorded lease · Vol 2877, Pg 324 · 2 pages'},
+  'CAN-006':{src:'leases/CAN-006.pdf',sub:'Recorded lease + ratification (3193/145) + amended ratification (3267/217) · Vol 2883, Pg 308 · 4 pages'},
+  'CAN-007':{src:'leases/CAN-007.pdf',sub:'Recorded lease · Vol 3193, Pg 155 · 2 pages'},
+  'CAN-008':{src:'leases/CAN-008.pdf',sub:'Recorded lease · Vol 3193, Pg 157 · 2 pages'},
+  'CAN-009':{src:'leases/CAN-009.pdf',sub:'Recorded lease · Vol 3193, Pg 143 · 2 pages'},
+  'CAN-010':{src:'leases/CAN-010.pdf',sub:'Recorded lease · Vol 3193, Pg 148 · 2 pages'},
+  'CAN-011':{src:'leases/CAN-011.pdf',sub:'Recorded lease · Vol 3193, Pg 150 · 2 pages'},
+  'CAN-012':{src:'leases/CAN-012.pdf',sub:'Recorded lease · Vol 3193, Pg 153 · 2 pages'},
+  'CAN-013':{src:'leases/CAN-013.pdf',sub:'Recorded lease · Vol 3193, Pg 159 · 3 pages'},
+  'CAN-014':{src:'leases/CAN-014.pdf',sub:'Recorded lease · Vol 3193, Pg 162 · 3 pages'},
+  'CAN-016':{src:'leases/CAN-016.pdf',sub:'Recorded lease · Vol 3267, Pg 219 · 2 pages'},
+  'CAN-017':{src:'leases/CAN-017.pdf',sub:'Recorded lease · Vol 3319, Pg 85 · 2 pages'},
+  'CAN-018':{src:'leases/CAN-018.pdf',sub:'Recorded lease · Vol 3347, Pg 236 · 2 pages'},
+  'CAN-019':{src:'leases/CAN-019.pdf',sub:'Recorded lease · Vol 3513, Pg 116 · 2 pages'},
+  'CAN-021':{src:'leases/CAN-021.pdf',sub:'Recorded lease · Vol 3560, Pg 133 · 5 pages'},
+  'CAN-022':{src:'leases/CAN-022.pdf',sub:'Recorded lease · Vol 3849, Pg 115 · 2 pages'},
+  'CAN-024':{src:'leases/CAN-024.pdf',sub:'Recorded lease · Vol 3936, Pg 148 · 3 pages'},
+  'CAN-025':{src:'leases/CAN-025.pdf',sub:'Recorded lease · Vol 3936, Pg 154 · 3 pages'},
+  'CAN-027':{src:'leases/CAN-027.pdf',sub:'Recorded lease + memorandum · Inst 2025-000010836 · 8 pages'},
+  'CAN-028':{src:'leases/CAN-028.pdf',sub:'Recorded lease + memorandum · Inst 2025-000006993 · 9 pages'},
+  'CAN-029':{src:'leases/CAN-029.pdf',sub:'Recorded lease + memorandum · Inst 2025-000006983 · 8 pages'}
+};
+// contract numbers that should have a lease file; the ones without a file yet say so
+const LEASETEST=/^CAN-/;
 const PLATDOCS={
   'CANNON GU':{src:'plats/cannon_deep_unit_plat.png',short:'Prelim 5/13/26',title:'Cannon Deep Unit · Survey plat',sub:'Bowman · Job 381963 · Preliminary 5/13/2026 · Rev 0 · called 719.57 acres'},
   'DAVIS GU':{src:'plats/davis_deep_unit_plat.png',short:'Rev 4/1/26',title:'Davis Deep Unit · Survey plat',sub:'Bowman · Job 381489 · dated 2/10/2026 · revised 4/1/2026 · called 658.357 acres'},
