@@ -10,7 +10,7 @@ Live at https://pwe-dashboard.vercel.app (Vercel project `pwe-dashboard`, team s
 | `/pwe-iii/` | PWE III dashboard (Harrison County, TX) · unit acres tie to the Bowman survey plats in `pwe-iii/plats/` |
 | `/pwe-iv/` | PWE IV dashboard (Black Lake · Natchitoches & Red River Parishes, LA) · no units or plats yet, tracts grouped by township-range |
 
-Each dashboard has a **Tour** button (guided walkthrough, `v3/_tour.js`); `?tour` in the URL starts it, and the landing page links to it.
+Each dashboard has a **Tour** button (guided walkthrough, `v3/_tour.js`); `?tour` in the URL starts it, and the landing page links to it. **Play with voice** narrates each step with the browser's built-in speech voice and advances on its own.
 
 Records → **Export to Excel** downloads the rows shown as an Excel table (ExcelJS, served from `lib/` and loaded on click).
 

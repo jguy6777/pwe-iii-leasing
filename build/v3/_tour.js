@@ -10,7 +10,7 @@ const TOUR=(function(){
     return ids.sort((a,b)=>TSTAT[b].t-TSTAT[a].t)[0]; };
   const toTab=t=>{ if(curTab!==t) setTab(t); };
   const S=[
-    {t:'Welcome to the %%CODE%% dashboard', b:`This short tour shows where everything is and how to use it. It takes about two minutes.<br><br>Use <b>Next</b> / <b>Back</b> or the arrow keys, and <b>Esc</b> to leave at any time. You can replay it from the <b>Tour</b> button on the left.`},
+    {t:'Welcome to the %%CODE%% dashboard', b:`This short tour shows where everything is and how to use it. It takes about two minutes.<br><br>Press <b>Play with voice</b> to have it narrated and move along on its own, or use <b>Next</b> / <b>Back</b> and the arrow keys, and <b>Esc</b> to leave at any time. You can replay it from the <b>Tour</b> button on the left.`},
     {sel:'.rail', side:'right', pre:()=>toTab('ov'), t:'Views', b:`The rail on the left switches between the three views: the <b>Overview</b>, the <b>${IV?'Townships &amp; map':'Units &amp; plats'}</b> map, and the <b>Records</b> table. ${$('.rail a.nav')?'<b>Home</b> goes back to the list of PWE projects.':''}`},
     {sel:'.bar', side:'bottom', pre:()=>toTab('ov'), t:'Filters', b:`Everything on every view follows these filters. Pick a ${U} or a landowner status here. Clicking a bar, ${U} or owner elsewhere also adds a filter, and each one shows as a chip you can remove with <b>×</b>. <b>Clear filters</b> resets all of them.`},
     {sel:'#kpis-l', side:'right', pre:()=>toTab('ov'), t:'Headline numbers', b:`Total net acres, leased net acres and tract counts for whatever the filters currently include. Net acres are each owner's interest, counted once per tract.`},
@@ -29,12 +29,39 @@ const TOUR=(function(){
     {t:`You're all set`, b:`That's the whole dashboard. Replay this tour any time from the <b>Tour</b> button on the left.<br><br>Data: %%CODE%% Mapper export, %%DATE_S%%.`},
   ];
   let i=-1, saved=null, el=null, hole=null, raf=0;
+  // ----- narration: the browser's built-in speech voice reads each step and moves on by itself -----
+  const SY=window.speechSynthesis, CanSpeak=!!(SY&&window.SpeechSynthesisUtterance);
+  let playing=false, voice=null, utt=0, adv=0;
+  const pickVoice=()=>{ if(!CanSpeak) return null; const v=SY.getVoices(), en=v.filter(x=>/^en[-_]US/i.test(x.lang)), any=v.filter(x=>/^en/i.test(x.lang));
+    const find=re=>en.find(x=>re.test(x.name))||any.find(x=>re.test(x.name));
+    return find(/(Aria|Jenny|Ava|Emma|Andrew|Guy).*Natural/i)||find(/Natural/i)||find(/Google US English/i)||find(/Samantha|Ava|Allison|Zira/i)||en[0]||any[0]||null; };
+  if(CanSpeak){ voice=pickVoice(); SY.addEventListener&&SY.addEventListener('voiceschanged',()=>{ voice=pickVoice(); }); }
+  // spoken wording: symbols and abbreviations a voice would stumble on
+  const spoken=st=>{ let t=(st.t+'. '+st.b).replace(/<br\s*\/?>/g,' ')
+      .replace(/<b>‹<\/b> and <b>›<\/b>/g,'the arrow buttons').replace(/<b>\+<\/b> \/ <b>−<\/b>/g,'the plus and minus buttons')
+      .replace(/ \(or the plus and minus buttons\)/,', or use the plus and minus buttons,').replace(/% leased/g,'percent leased').replace(/ \/ /g,' or ').replace(/<b>⤢<\/b>/g,'the fit button').replace(/<b>×<\/b>/g,'the x')
+      .replace(/<[^>]+>/g,'').replace(/&amp;/g,'and').replace(/&[a-z]+;/g,' ')
+      .replace(/\bPWE III\b/g,'P W E 3').replace(/\bPWE IV\b/g,'P W E 4').replace(/\bSTR\b/g,'S T R').replace(/\bRRC\b/g,'R R C').replace(/\bSONRIS\b/g,'Sonris')
+      .replace(/contract no\./g,'contract number').replace(/\bEsc\b/g,'Escape').replace(/\bNet ac\b/g,'Net acres').replace(/Oct (\d+), (\d{4})/g,'October $1, $2');
+    return t.replace(/\s+/g,' ').trim(); };
+  function stopVoice(){ clearTimeout(adv); utt++; if(CanSpeak) SY.cancel(); }
+  function speakStep(){ stopVoice(); if(!playing||i<0) return; const me=utt, parts=spoken(S[i]).match(/[^.!?]+[.!?]*/g)||[];
+    // one utterance per sentence: Chrome cuts long utterances off after about 15 seconds
+    parts.forEach((txt,k)=>{ const u=new SpeechSynthesisUtterance(txt.trim()); if(voice){ u.voice=voice; u.lang=voice.lang; } u.rate=1.02;
+      if(k===parts.length-1) u.onend=()=>{ if(me!==utt||!playing) return; adv=setTimeout(()=>{ if(me!==utt||!playing) return; if(i<S.length-1) go(i+1); else setPlay(false); },1100); };
+      u.onerror=e=>{ if(me===utt&&e.error==='not-allowed') setPlay(false); };
+      SY.speak(u); }); }
+  function playBtn(){ const b=$('#tour-v'); if(!b) return; b.hidden=!CanSpeak; b.classList.toggle('on',playing);
+    b.querySelector('svg').innerHTML=playing?'<rect x="6.5" y="5" width="4" height="14" rx="1"/><rect x="13.5" y="5" width="4" height="14" rx="1"/>':'<path d="M8 5.5v13l10.5-6.5z"/>';
+    b.querySelector('span').textContent=playing?'Pause voice':(i===0?'Play with voice':'Voice'); b.setAttribute('aria-pressed',playing); }
+  function setPlay(on){ playing=on&&CanSpeak; try{ localStorage.setItem('pwe-tour-voice',playing?'1':'0'); }catch(e){} playBtn(); if(playing) speakStep(); else stopVoice(); }
   function build(){
     el=document.createElement('div'); el.className='tour'; el.innerHTML=`<div class="tour-hole"></div><div class="tour-card" role="dialog" aria-modal="true" aria-labelledby="tour-t">
-      <div class="tour-step" id="tour-n"></div><h3 id="tour-t"></h3><div class="tour-b" id="tour-b"></div>
+      <div class="tour-top"><div class="tour-step" id="tour-n"></div><button type="button" class="tour-play" id="tour-v" hidden><svg viewBox="0 0 24 24" aria-hidden="true"></svg><span></span></button></div><h3 id="tour-t"></h3><div class="tour-b" id="tour-b"></div>
       <div class="tour-dots" id="tour-d"></div>
       <div class="tour-ft"><button type="button" class="btn" id="tour-x">Skip tour</button><span></span><button type="button" class="btn" id="tour-p">Back</button><button type="button" class="btn pri" id="tour-nx">Next</button></div></div>`;
     document.body.appendChild(el); hole=el.querySelector('.tour-hole');
+    $('#tour-v').onclick=()=>setPlay(!playing);
     $('#tour-x').onclick=end; $('#tour-p').onclick=()=>go(i-1); $('#tour-nx').onclick=()=>i<S.length-1?go(i+1):end();
     el.querySelector('.tour-hole').onclick=e=>e.stopPropagation();
     $('#tour-d').innerHTML=S.map((_,k)=>`<button type="button" aria-label="Step ${k+1}" data-k="${k}"></button>`).join('');
@@ -60,10 +87,11 @@ const TOUR=(function(){
     $$('#tour-d button').forEach((b,j)=>b.classList.toggle('on',j===i));
     setTimeout(()=>{ const t=target(s); if(t){ const r=t.getBoundingClientRect(); if(r.top<70||r.bottom>innerHeight-20) t.scrollIntoView({block:r.height>innerHeight*.7?'start':'center'}); }
       place(); setTimeout(place,350); }, 60);
+    playBtn(); if(playing) speakStep(); else stopVoice();
     $('#tour-nx').focus({preventScroll:true}); }
-  function start(){ if(i>=0) return; if(!el) build(); closeDrawer&&!$('#drawer').hidden&&closeDrawer(); if(!$('#docv').hidden) closeDoc();
-    saved={tab:curTab||'ov', unit:state.unit, tract:PL.tract}; el.hidden=false; document.documentElement.classList.add('touring'); go(0); }
-  function end(){ if(i<0) return; i=-1; el.hidden=true; document.documentElement.classList.remove('touring');
+  function start(ev){ if(i>=0) return; if(!el) build(); closeDrawer&&!$('#drawer').hidden&&closeDrawer(); if(!$('#docv').hidden) closeDoc();
+    saved={tab:curTab||'ov', unit:state.unit, tract:PL.tract}; el.hidden=false; let pref=false; try{ pref=localStorage.getItem('pwe-tour-voice')==='1'; }catch(e){} playing=!!(ev&&ev.isTrusted&&pref&&CanSpeak); document.documentElement.classList.add('touring'); go(0); }
+  function end(){ if(i<0) return; i=-1; playing=false; stopVoice(); el.hidden=true; document.documentElement.classList.remove('touring');
     if(saved){ PL.tract=saved.tract; setUnit(saved.unit,!!saved.tract); setTab(saved.tab); }
     if(/[?&]tour\b/.test(location.search)) history.replaceState(null,'',location.pathname+location.hash);
     requestAnimationFrame(fitKeyBox); $('#tour').focus({preventScroll:true}); }
@@ -73,6 +101,6 @@ const TOUR=(function(){
     else if(e.key==='ArrowRight'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){ e.preventDefault(); i<S.length-1?go(i+1):end(); }
     else if(e.key==='ArrowLeft'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){ e.preventDefault(); go(i-1); } },true);
   $('#tour').onclick=start;
-  return {start,end,go};
+  return {start,end,go,spoken:k=>spoken(S[k]),n:()=>S.length};
 })();
 if(/[?&]tour\b/.test(location.search)) setTimeout(()=>TOUR.start(),400);
