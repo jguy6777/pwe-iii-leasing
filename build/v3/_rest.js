@@ -156,50 +156,73 @@ function leaseList(rows){ const ls=[...new Set(rows.map(r=>r.lno).filter(Boolean
     ?`<button class="pdoc" type="button" data-lease="${esc(l)}" data-tip="${esc(LEASEDOCS[l].sub)}">${DOCICON}<span>${esc(l)}</span></button>`
     :`<span class="pdoc lmiss" data-tip="No lease file linked yet">${esc(l)}</span>`).join('')}</div></div>`; }
 function wireLeases(root){ (root||document).querySelectorAll('[data-lease]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); openLease(b.dataset.lease); }); }
-let PDFJS=null; const LCACHE={};
+let PDFJS=null;
 function loadPdfJs(){ if(PDFJS) return PDFJS; const base='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
   const add=src=>new Promise((res,rej)=>{ const sc=document.createElement('script'); sc.src=src; sc.onload=res; sc.onerror=()=>rej(new Error('Could not load '+src)); document.head.appendChild(sc); });
   PDFJS=add(base+'pdf.min.js').then(()=>add(base+'pdf.worker.min.js')).then(()=>{ pdfjsLib.GlobalWorkerOptions.workerSrc=base+'pdf.worker.min.js'; return pdfjsLib; });
   PDFJS.catch(()=>{ PDFJS=null; }); return PDFJS; }
-async function renderLease(src){ const lib=await loadPdfJs(); const buf=await (await fetch(src)).arrayBuffer();
-  const pdf=await lib.getDocument({data:buf,isEvalSupported:false}).promise, pages=[];
-  for(let i=1;i<=pdf.numPages;i++) pages.push(await pdf.getPage(i));
-  const GAP=24, W=1500; let sc=pages.map(p=>W/p.getViewport({scale:1}).width), H=pages.reduce((h,p,i)=>h+p.getViewport({scale:sc[i]}).height+GAP,GAP);
-  if(H>30000){ const k=30000/H; sc=sc.map(x=>x*k); H=30000; }
-  const big=document.createElement('canvas'); big.width=Math.ceil(Math.max(...pages.map((p,i)=>p.getViewport({scale:sc[i]}).width)))+2*GAP; big.height=Math.ceil(H);
-  const g=big.getContext('2d'); g.fillStyle='#c9c2b6'; g.fillRect(0,0,big.width,big.height); let y=GAP;
-  for(let i=0;i<pages.length;i++){ const vp=pages[i].getViewport({scale:sc[i]}), c=document.createElement('canvas'); c.width=Math.ceil(vp.width); c.height=Math.ceil(vp.height);
-    const cx=c.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,c.width,c.height); await pages[i].render({canvasContext:cx,viewport:vp}).promise;
-    g.drawImage(c,Math.round((big.width-c.width)/2),Math.round(y)); y+=c.height+GAP; }
-  return await new Promise(res=>big.toBlob(b=>res({url:URL.createObjectURL(b),n:pdf.numPages}),'image/jpeg',.88)); }
-async function openLease(lno){ const d=LEASEDOCS[lno]; if(!d) return; DV.doc=null; DV.lease=lno;
+// Leases are drawn page by page: each page gets its own canvas, drawn only when it is on (or near) screen and at the
+// sharpness the current zoom needs; pages scrolled well away are released. The last 3 leases opened stay loaded.
+const LW=1500, LGAP=24, LKEEP=3, LMAXPX=10e6, LDOCS=new Map();
+async function layoutLease(src){ const lib=await loadPdfJs(); const pdf=await lib.getDocument({url:src,isEvalSupported:false}).promise, pages=[]; let y=LGAP;
+  for(let i=1;i<=pdf.numPages;i++){ const pg=await pdf.getPage(i), v=pg.getViewport({scale:1}), k=LW/v.width, h=v.height*k;
+    pages.push({pg,k,w:LW,h,y,el:null,cv:null,rs:0,task:null}); y+=h+LGAP; }
+  return {pdf,pages,W:LW+2*LGAP,H:y}; }
+function getLease(lno,src){ let p=LDOCS.get(lno); if(p){ LDOCS.delete(lno); LDOCS.set(lno,p); return p; }
+  p=layoutLease(src); p.catch(()=>{ if(LDOCS.get(lno)===p) LDOCS.delete(lno); }); LDOCS.set(lno,p);
+  while(LDOCS.size>LKEEP){ const [k,old]=LDOCS.entries().next().value; LDOCS.delete(k); old.then(L=>{ if(DV.L!==L){ L.pages.forEach(dropPage); L.pdf.destroy(); } }).catch(()=>{}); }
+  return p; }
+function dropPage(p){ if(p.task){ p.task.cancel(); p.task=null; } if(p.cv){ p.cv.width=p.cv.height=0; p.cv.remove(); p.cv=null; } if(p.rs) p.pg.cleanup(); p.rs=0; }
+function mountLease(L){ const box=$('#dv-pages'); box.innerHTML=''; box.style.width=L.W+'px'; box.style.height=L.H+'px';
+  L.pages.forEach((p,i)=>{ const el=document.createElement('div'); el.className='dvpg'; el.style.cssText=`left:${LGAP}px;top:${p.y}px;width:${p.w}px;height:${p.h}px`;
+    el.setAttribute('role','img'); el.setAttribute('aria-label',`Page ${i+1} of ${L.pages.length}`); p.el=el; p.cv=null; p.rs=0; box.appendChild(el); }); }
+function unmountLease(){ const L=DV.L; DV.L=null; clearTimeout(LQ.t); LQ.t=0; if(L) L.pages.forEach(p=>{ dropPage(p); p.el=null; }); const box=$('#dv-pages'); box.innerHTML=''; box.hidden=true; }
+const LQ={t:0,busy:false};
+function leaseQueue(){ if(!LQ.t) LQ.t=setTimeout(()=>{ LQ.t=0; leasePump(); },60); }
+async function leasePump(){ const L=DV.L; if(!L||LQ.busy) return; LQ.busy=true;
+  try{ for(;;){ if(DV.L!==L||$('#docv').hidden) break;
+      const b=$('#dvb').getBoundingClientRect(), dpr=Math.min(window.devicePixelRatio||1,2.5), top=-DV.y/DV.s, vh=b.height/DV.s, near=[];
+      L.pages.forEach(p=>{ const d=p.y+p.h<top?top-(p.y+p.h):p.y>top+vh?p.y-(top+vh):0; if(d<=vh) near.push([d,p]); else if(d>vh*3&&p.cv) dropPage(p); });
+      near.sort((x,y)=>x[0]-y[0]); let want=null, ws=0;
+      for(const [,p] of near){ let sc=DV.s*dpr; if(p.w*p.h*sc*sc>LMAXPX) sc=Math.sqrt(LMAXPX/(p.w*p.h)); if(!p.rs||Math.abs(p.rs-sc)/sc>.2){ want=p; ws=sc; break; } }
+      if(!want) break;
+      try{ await renderPage(want,ws); }catch(e){ console.error(e); want.rs=ws; } } }
+  finally{ LQ.busy=false; } }
+async function renderPage(p,sc){ const vp=p.pg.getViewport({scale:p.k*sc}), c=document.createElement('canvas'); c.width=Math.ceil(vp.width); c.height=Math.ceil(vp.height);
+  const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height); const t=p.task=p.pg.render({canvasContext:g,viewport:vp});
+  try{ await t.promise; }catch(e){ c.width=c.height=0; if(p.task===t) p.task=null; if(e&&e.name==='RenderingCancelledException') return; throw e; }
+  if(p.task!==t||!p.el){ c.width=c.height=0; return; } p.task=null;
+  if(p.cv){ p.cv.width=p.cv.height=0; p.cv.remove(); } p.cv=c; p.rs=sc; p.el.appendChild(c); }
+async function openLease(lno){ const d=LEASEDOCS[lno]; if(!d) return; unmountLease(); DV.doc=null; DV.lease=lno;
   const rr=DATA.find(r=>r.lno===lno); $('#dv-title').textContent=`Lease ${lno}${rr&&rr.lessor?' · '+title(rr.lessor):''}`; $('#dv-sub').textContent=d.sub;
-  const a=$('#dv-pdf'); a.href=d.src; a.hidden=false; const im=$('#dv-img'), msg=$('#dv-msg');
-  $('#docv').hidden=false; $('#dv-close').focus(); im.style.visibility='hidden'; msg.hidden=false; msg.textContent='Loading lease…';
-  try{ const r=LCACHE[lno]||(LCACHE[lno]=renderLease(d.src)); const res=await r; if(DV.lease!==lno) return;
-    im.alt=`Lease ${lno}`; im.onload=()=>{ im.style.visibility=''; msg.hidden=true; dvAt(.5); }; if(im.src!==res.url) im.src=res.url; else im.onload(); }
-  catch(e){ console.error(e); delete LCACHE[lno]; if(DV.lease===lno){ msg.textContent='Could not display this lease here. Use Open PDF to view it.'; } } }
+  const a=$('#dv-pdf'); a.href=d.src; a.hidden=false; const msg=$('#dv-msg'); $('#dv-img').hidden=true; $('#dv-z').textContent='';
+  $('#docv').hidden=false; $('#dv-close').focus(); msg.hidden=false; msg.textContent='Loading lease…';
+  try{ const L=await getLease(lno,d.src); if(DV.lease!==lno||DV.L||$('#docv').hidden) return; DV.L=L; mountLease(L); $('#dv-pages').hidden=false; msg.hidden=true; dvAt(.5); }
+  catch(e){ console.error(e); if(DV.lease===lno){ msg.textContent='Could not display this lease here. Use Open PDF to view it.'; } } }
 
 // ---------- survey plat viewer ----------
-const DV={doc:null,s:1,x:0,y:0};
+const DV={doc:null,lease:null,L:null,s:1,x:0,y:0};
 function wireDocs(root){ (root||document).querySelectorAll('[data-doc]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); openDoc(b.dataset.doc); }); }
-function dvApply(){ const im=$('#dv-img'); im.style.transform=`translate(${DV.x}px,${DV.y}px) scale(${DV.s})`; $('#dv-z').textContent=Math.round(DV.s*100)+'%'; }
-function dvFit(width){ const b=$('#dvb').getBoundingClientRect(), im=$('#dv-img'), w=im.naturalWidth, h=im.naturalHeight; if(!w) return;
+function dvApply(){ (DV.lease?$('#dv-pages'):$('#dv-img')).style.transform=`translate(${DV.x}px,${DV.y}px) scale(${DV.s})`; $('#dv-z').textContent=Math.round(DV.s*100)+'%'; if(DV.L) leaseQueue(); }
+// size of what is showing: the plat image, or the stacked lease pages
+function dvSize(){ if(DV.lease) return DV.L?{w:DV.L.W,h:DV.L.H}:{w:0,h:0}; const im=$('#dv-img'); return {w:im.naturalWidth,h:im.naturalHeight}; }
+function dvFit(width){ const b=$('#dvb').getBoundingClientRect(), {w,h}=dvSize(); if(!w) return;
   DV.s=width?(b.width-32)/w:Math.min((b.width-32)/w,(b.height-32)/h); DV.x=(b.width-w*DV.s)/2; DV.y=width?16:(b.height-h*DV.s)/2; dvApply(); }
 // open at a set zoom (leases start at 50%), centered across, top of page 1 showing
-function dvAt(s){ const b=$('#dvb').getBoundingClientRect(), im=$('#dv-img'); if(!im.naturalWidth) return; DV.s=s; DV.x=(b.width-im.naturalWidth*s)/2; DV.y=16; dvApply(); }
+function dvAt(s){ const b=$('#dvb').getBoundingClientRect(), {w}=dvSize(); if(!w) return; DV.s=s; DV.x=(b.width-w*s)/2; DV.y=16; dvApply(); }
 function dvZoom(k,cx,cy){ const b=$('#dvb').getBoundingClientRect(); if(cx==null){ cx=b.width/2; cy=b.height/2; } const ns=Math.min(4,Math.max(.08,DV.s*k)); k=ns/DV.s; DV.x=cx-(cx-DV.x)*k; DV.y=cy-(cy-DV.y)*k; DV.s=ns; dvApply(); }
-function openDoc(u){ const d=PLATDOCS[u]; if(!d) return; DV.doc=u; DV.lease=null; $('#dv-pdf').hidden=true; $('#dv-msg').hidden=true; $('#dv-title').textContent=d.title; $('#dv-sub').textContent=d.sub; const im=$('#dv-img');
+function openDoc(u){ const d=PLATDOCS[u]; if(!d) return; unmountLease(); DV.doc=u; DV.lease=null; $('#dv-img').hidden=false; $('#dv-pdf').hidden=true; $('#dv-msg').hidden=true; $('#dv-title').textContent=d.title; $('#dv-sub').textContent=d.sub; const im=$('#dv-img');
   im.alt=d.title; im.onload=()=>dvFit(false); $('#docv').hidden=false; if(im.getAttribute('src')!==d.src) im.src=d.src; else requestAnimationFrame(()=>dvFit(false)); $('#dv-close').focus(); }
-const closeDoc=()=>{ $('#docv').hidden=true; };
+const closeDoc=()=>{ $('#docv').hidden=true; unmountLease(); DV.lease=null; };
 $('#dv-close').onclick=closeDoc; $('#dv-fit').onclick=()=>dvFit(false); $('#dv-w').onclick=()=>dvFit(true); $('#dv-in').onclick=()=>dvZoom(1.25); $('#dv-out').onclick=()=>dvZoom(1/1.25);
 document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return; if(!$('#docv').hidden) closeDoc(); else if(!$('#drawer').hidden) closeDrawer(); else if(PL.tract) unselectTract(); });
 (function(){ const box=$('#dvb'); let dr=null;
   // leases: wheel scrolls the pages (Shift+wheel sideways); Ctrl+wheel or trackpad pinch still zooms. Plats keep wheel-to-zoom.
   const clamp=(v,lo,hi)=>lo>hi?(lo+hi)/2:Math.min(hi,Math.max(lo,v));
-  function dvScroll(dx,dy){ const b=box.getBoundingClientRect(), im=$('#dv-img'), w=im.naturalWidth*DV.s, h=im.naturalHeight*DV.s;
+  function dvScroll(dx,dy){ const b=box.getBoundingClientRect(), z=dvSize(), w=z.w*DV.s, h=z.h*DV.s;
     DV.x=clamp(DV.x-dx,b.width-w-16,16); DV.y=clamp(DV.y-dy,b.height-h-16,16); dvApply(); }
   box.addEventListener('wheel',e=>{ e.preventDefault(); const b=box.getBoundingClientRect();
+    if(DV.lease&&!DV.L) return;
     if(DV.lease&&!e.ctrlKey&&!e.metaKey){ let dx=e.deltaX, dy=e.deltaY; const m=e.deltaMode===1?40:e.deltaMode===2?b.height:1; dx*=m; dy*=m;
       if(e.shiftKey&&!dx){ dx=dy; dy=0; } dvScroll(dx,dy); return; }
     dvZoom(e.deltaY>0?1/1.15:1.15,e.clientX-b.left,e.clientY-b.top); },{passive:false});
@@ -209,6 +232,6 @@ document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return; if(!$('#do
   box.addEventListener('pointermove',e=>{ if(!dr) return; DV.x=dr.ox+e.clientX-dr.x; DV.y=dr.oy+e.clientY-dr.y; dvApply(); });
   const up=()=>{ dr=null; box.classList.remove('panning'); }; box.addEventListener('pointerup',up); box.addEventListener('pointercancel',up);
   box.addEventListener('dblclick',e=>{ const b=box.getBoundingClientRect(); dvZoom(2,e.clientX-b.left,e.clientY-b.top); });
-  if(window.ResizeObserver) new ResizeObserver(()=>{ if(!$('#docv').hidden&&!DV.lease) dvFit(false); }).observe(box);
+  if(window.ResizeObserver) new ResizeObserver(()=>{ if($('#docv').hidden) return; if(DV.lease) leaseQueue(); else dvFit(false); }).observe(box);
 })();
 

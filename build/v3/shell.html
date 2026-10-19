@@ -366,6 +366,9 @@ td.r{font-family:var(--f-m);font-size:12px}
 .docv .zl{font:500 12px var(--f-m);color:var(--text-mid);min-width:48px;text-align:center}
 .dvb{position:relative;flex:1;overflow:hidden;margin:14px 20px 20px;border-radius:12px;background:var(--panel-2);border:1px solid var(--border);cursor:grab;touch-action:none}
 .dvb.panning{cursor:grabbing}
+.dvpages{position:absolute;left:0;top:0;transform-origin:0 0;user-select:none}
+.dvpg{position:absolute;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+.dvpg canvas{display:block;width:100%;height:100%}
 .dvb img{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none;user-select:none;-webkit-user-drag:none;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.18)}
 
 @media (max-width:1500px){.ovgrid{grid-template-columns:minmax(270px,1fr) minmax(0,1.7fr) minmax(270px,1fr)}}
@@ -516,7 +519,7 @@ td.r{font-family:var(--f-m);font-size:12px}
 <div class="docv" id="docv" hidden role="dialog" aria-modal="true" aria-labelledby="dv-title">
   <div class="dvh"><div><h3 id="dv-title"></h3><div class="dvs" id="dv-sub"></div></div>
     <div class="dvc"><button class="ibtn" type="button" id="dv-out" aria-label="Zoom out">−</button><span class="zl" id="dv-z"></span><button class="ibtn" type="button" id="dv-in" aria-label="Zoom in">+</button><button class="btn" type="button" id="dv-fit">Fit page</button><button class="btn" type="button" id="dv-w">Fit width</button><a class="btn" id="dv-pdf" hidden target="_blank" rel="noopener">Open PDF</a><button class="btn pri" type="button" id="dv-close">Close</button></div></div>
-  <div class="dvb" id="dvb"><img id="dv-img" alt="" draggable="false"><div class="dvmsg" id="dv-msg" hidden></div></div>
+  <div class="dvb" id="dvb"><img id="dv-img" alt="" draggable="false"><div class="dvpages" id="dv-pages" hidden></div><div class="dvmsg" id="dv-msg" hidden></div></div>
 </div>
 <datalist id="tractlist"></datalist>
 <div id="tip" hidden></div>
