@@ -177,7 +177,7 @@ async function openLease(lno){ const d=LEASEDOCS[lno]; if(!d) return; DV.doc=nul
   const a=$('#dv-pdf'); a.href=d.src; a.hidden=false; const im=$('#dv-img'), msg=$('#dv-msg');
   $('#docv').hidden=false; $('#dv-close').focus(); im.style.visibility='hidden'; msg.hidden=false; msg.textContent='Loading lease…';
   try{ const r=LCACHE[lno]||(LCACHE[lno]=renderLease(d.src)); const res=await r; if(DV.lease!==lno) return;
-    im.alt=`Lease ${lno}`; im.onload=()=>{ im.style.visibility=''; msg.hidden=true; dvFit(true); }; if(im.src!==res.url) im.src=res.url; else im.onload(); }
+    im.alt=`Lease ${lno}`; im.onload=()=>{ im.style.visibility=''; msg.hidden=true; dvAt(.5); }; if(im.src!==res.url) im.src=res.url; else im.onload(); }
   catch(e){ console.error(e); delete LCACHE[lno]; if(DV.lease===lno){ msg.textContent='Could not display this lease here. Use Open PDF to view it.'; } } }
 
 // ---------- survey plat viewer ----------
@@ -186,6 +186,8 @@ function wireDocs(root){ (root||document).querySelectorAll('[data-doc]').forEach
 function dvApply(){ const im=$('#dv-img'); im.style.transform=`translate(${DV.x}px,${DV.y}px) scale(${DV.s})`; $('#dv-z').textContent=Math.round(DV.s*100)+'%'; }
 function dvFit(width){ const b=$('#dvb').getBoundingClientRect(), im=$('#dv-img'), w=im.naturalWidth, h=im.naturalHeight; if(!w) return;
   DV.s=width?(b.width-32)/w:Math.min((b.width-32)/w,(b.height-32)/h); DV.x=(b.width-w*DV.s)/2; DV.y=width?16:(b.height-h*DV.s)/2; dvApply(); }
+// open at a set zoom (leases start at 50%), centered across, top of page 1 showing
+function dvAt(s){ const b=$('#dvb').getBoundingClientRect(), im=$('#dv-img'); if(!im.naturalWidth) return; DV.s=s; DV.x=(b.width-im.naturalWidth*s)/2; DV.y=16; dvApply(); }
 function dvZoom(k,cx,cy){ const b=$('#dvb').getBoundingClientRect(); if(cx==null){ cx=b.width/2; cy=b.height/2; } const ns=Math.min(4,Math.max(.08,DV.s*k)); k=ns/DV.s; DV.x=cx-(cx-DV.x)*k; DV.y=cy-(cy-DV.y)*k; DV.s=ns; dvApply(); }
 function openDoc(u){ const d=PLATDOCS[u]; if(!d) return; DV.doc=u; DV.lease=null; $('#dv-pdf').hidden=true; $('#dv-msg').hidden=true; $('#dv-title').textContent=d.title; $('#dv-sub').textContent=d.sub; const im=$('#dv-img');
   im.alt=d.title; im.onload=()=>dvFit(false); $('#docv').hidden=false; if(im.getAttribute('src')!==d.src) im.src=d.src; else requestAnimationFrame(()=>dvFit(false)); $('#dv-close').focus(); }
@@ -207,6 +209,6 @@ document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return; if(!$('#do
   box.addEventListener('pointermove',e=>{ if(!dr) return; DV.x=dr.ox+e.clientX-dr.x; DV.y=dr.oy+e.clientY-dr.y; dvApply(); });
   const up=()=>{ dr=null; box.classList.remove('panning'); }; box.addEventListener('pointerup',up); box.addEventListener('pointercancel',up);
   box.addEventListener('dblclick',e=>{ const b=box.getBoundingClientRect(); dvZoom(2,e.clientX-b.left,e.clientY-b.top); });
-  if(window.ResizeObserver) new ResizeObserver(()=>{ if(!$('#docv').hidden) dvFit(false); }).observe(box);
+  if(window.ResizeObserver) new ResizeObserver(()=>{ if(!$('#docv').hidden&&!DV.lease) dvFit(false); }).observe(box);
 })();
 
