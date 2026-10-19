@@ -1,3 +1,4 @@
+const EXTICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
 // dates arrive as YYYY-MM-DD; show mm/dd/yyyy, sort on the stored value
 const mdy=v=>{ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v||''); return m?`${m[2]}/${m[3]}/${m[1]}`:(v||''); };
 function renderUnitHead(){
@@ -5,7 +6,7 @@ function renderUnitHead(){
   const meta=u?(doc?`Survey plat ${doc.short} · called ${fmt(PLATCALL[u],3)} ac`:PLATCALL[u]?`${PLATNOTE[u]||'Plat not attached'} · called ${fmt(PLATCALL[u],3)} ac`:u===OUT?'Tracts outside the gas units':`${fmt(tracts(rr))} tracts · no survey plat yet`):`${UNITS.filter(x=>x!==OUT).length} units · pick one from the list or the map`;
   $('#uhead').innerHTML=`<div class="navb"><button class="ibtn" type="button" id="u-prev" aria-label="Previous unit" ${!u||i<=0?'disabled':''}>‹</button><button class="ibtn" type="button" id="u-next" aria-label="Next unit" ${u&&i>=UNITS.length-1?'disabled':''}>›</button></div>
     <div><h2>${esc(u?bl(u):'All units')}</h2><div class="meta">${esc(meta)}</div></div>
-    <div class="uacts">${doc?`<button class="btn pri" type="button" data-doc="${esc(u)}">${DOCICON}<span>Survey plat</span></button>`:`<button class="btn" type="button" disabled>${DOCICON}<span>${u?'No survey plat attached':'Survey plat'}</span></button>`}<button class="btn" type="button" id="u-recs">View ${fmt(rr.length)} records</button></div>
+    <div class="uacts">${doc&&doc.url?`<a class="btn pri" href="${esc(doc.url)}" target="_blank" rel="noopener" data-lext="plat" data-tip="${esc(doc.sub)} · opens in FileCloud" style="text-decoration:none">${DOCICON}<span>Survey plat</span>${EXTICON}</a>`:doc?`<button class="btn pri" type="button" data-doc="${esc(u)}">${DOCICON}<span>Survey plat</span></button>`:`<button class="btn" type="button" disabled>${DOCICON}<span>${u?'No survey plat attached':'Survey plat'}</span></button>`}<button class="btn" type="button" id="u-recs">View ${fmt(rr.length)} records</button></div>
     <div class="stats">${stat('% leased',pctTxt(p),'')}${stat('Unit acres · plat',u===OUT?'–':fmt(unitAc(rr),3),u===OUT?'':'ac')}${stat('<i class="sw" style="background:var(--s-acq)"></i>Leased',fmt(pb.l,2),'ac')}${stat('<i class="sw" style="background:var(--s-work)"></i>Unleased',fmt(pb.u,2),'ac')}</div>`;
   $('#u-prev').onclick=()=>{ if(i>0) setUnit(UNITS[i-1]); };
   $('#u-next').onclick=()=>{ setUnit(u?UNITS[i+1]:UNITS[0]); };
@@ -157,7 +158,6 @@ function leaseList(rows){ const ls=[...new Set(rows.map(r=>r.lno).filter(Boolean
     ?`<button class="pdoc" type="button" data-lease="${esc(l)}" data-tip="${esc(LEASEDOCS[l].sub)}">${DOCICON}<span>${esc(l)}</span></button>`
     :`<span class="pdoc lmiss" data-tip="No lease file linked yet">${esc(l)}</span>`).join('')}</div></div>`; }
 // a lease kept on FileCloud (public share link, `url` in LEASEDOCS) opens there in a new tab instead of the built-in viewer
-const EXTICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
 function leaseExt(lno,cls,label){ const d=LEASEDOCS[lno]; return `<a class="${cls}" href="${esc(d.url)}" target="_blank" rel="noopener" data-lext="${esc(lno)}" data-tip="${esc(d.sub)} · opens in FileCloud" style="text-decoration:none">${DOCICON}<span>${label}</span>${EXTICON}</a>`; }
 function wireLeases(root){ (root||document).querySelectorAll('[data-lease]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); openLease(b.dataset.lease); });
   (root||document).querySelectorAll('[data-lext]').forEach(a=>a.onclick=e=>e.stopPropagation()); }
@@ -207,7 +207,7 @@ async function openLease(lno){ const d=LEASEDOCS[lno]; if(!d) return; if(d.url){
 
 // ---------- survey plat viewer ----------
 const DV={doc:null,lease:null,L:null,s:1,x:0,y:0};
-function wireDocs(root){ (root||document).querySelectorAll('[data-doc]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); openDoc(b.dataset.doc); }); }
+function wireDocs(root){ (root||document).querySelectorAll('[data-doc]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); openDoc(b.dataset.doc); }); (root||document).querySelectorAll('[data-lext]').forEach(a=>a.onclick=e=>e.stopPropagation()); }
 function dvApply(){ (DV.lease?$('#dv-pages'):$('#dv-img')).style.transform=`translate(${DV.x}px,${DV.y}px) scale(${DV.s})`; $('#dv-z').textContent=Math.round(DV.s*100)+'%'; if(DV.L) leaseQueue(); }
 // size of what is showing: the plat image, or the stacked lease pages
 function dvSize(){ if(DV.lease) return DV.L?{w:DV.L.W,h:DV.L.H}:{w:0,h:0}; const im=$('#dv-img'); return {w:im.naturalWidth,h:im.naturalHeight}; }
@@ -216,7 +216,7 @@ function dvFit(width){ const b=$('#dvb').getBoundingClientRect(), {w,h}=dvSize()
 // open at a set zoom (leases start at 50%), centered across, top of page 1 showing
 function dvAt(s){ const b=$('#dvb').getBoundingClientRect(), {w}=dvSize(); if(!w) return; DV.s=s; DV.x=(b.width-w*s)/2; DV.y=16; dvApply(); }
 function dvZoom(k,cx,cy){ const b=$('#dvb').getBoundingClientRect(); if(cx==null){ cx=b.width/2; cy=b.height/2; } const ns=Math.min(4,Math.max(.08,DV.s*k)); k=ns/DV.s; DV.x=cx-(cx-DV.x)*k; DV.y=cy-(cy-DV.y)*k; DV.s=ns; dvApply(); }
-function openDoc(u){ const d=PLATDOCS[u]; if(!d) return; unmountLease(); DV.doc=u; DV.lease=null; $('#dv-img').hidden=false; $('#dv-pdf').hidden=true; $('#dv-msg').hidden=true; $('#dv-title').textContent=d.title; $('#dv-sub').textContent=d.sub; const im=$('#dv-img');
+function openDoc(u){ const d=PLATDOCS[u]; if(!d) return; if(d.url){ window.open(d.url,'_blank','noopener'); return; } unmountLease(); DV.doc=u; DV.lease=null; $('#dv-img').hidden=false; $('#dv-pdf').hidden=true; $('#dv-msg').hidden=true; $('#dv-title').textContent=d.title; $('#dv-sub').textContent=d.sub; const im=$('#dv-img');
   im.alt=d.title; im.onload=()=>dvFit(false); $('#docv').hidden=false; if(im.getAttribute('src')!==d.src) im.src=d.src; else requestAnimationFrame(()=>dvFit(false)); $('#dv-close').focus(); }
 const closeDoc=()=>{ $('#docv').hidden=true; unmountLease(); DV.lease=null; };
 $('#dv-close').onclick=closeDoc; $('#dv-fit').onclick=()=>dvFit(false); $('#dv-w').onclick=()=>dvFit(true); $('#dv-in').onclick=()=>dvZoom(1.25); $('#dv-out').onclick=()=>dvZoom(1/1.25);
