@@ -1209,34 +1209,34 @@ const EXPORT_DATE='Oct 14, 2026';
 // Called acreage per unit from the Bowman survey plats. Tracts not on a unit's plat are left out of its unit acres.
 const PLATCALL={'CANNON GU':719.57,'DAVIS GU':658.357,'FENTON GU':670.647,'HUNT GU':686.91,'JENNIFER STEWART GU':712.503,'LOFTIS GU':640.00,'RESCH GU':641.94,'SUMMERS GU':772.598,'ZIMM GU':146.193};
 const OFFPLAT=new Set(['TX203-0075-011']);
-// Lease documents shown by the View lease buttons (pwe-iii/leases/<contract no>.pdf): recorded lease pages only.
+// Lease documents shown by the View lease buttons: `url` = FileCloud public share (opens in a new tab); `src` = a PDF in pwe-iii/leases/ for the built-in viewer. Recorded lease pages only.
 // Check requests, W-9s, purchase notices and title papers are removed and SSNs blacked out before a file is added here.
 const LEASEDOCS={
-  'CAN-001':{url:'https://filecloud.segland.com/url/yaut6juytkfirtrv',src:'leases/CAN-001.pdf',sub:'Recorded lease · Vol 3193, Pg 146 · 2 pages'},
-  'CAN-002':{url:'https://filecloud.segland.com/url/haxd6gzrcenduuan',src:'leases/CAN-002.pdf',sub:'Recorded lease · Vol 753, Pg 205 · 2 pages'},
-  'CAN-003':{url:'https://filecloud.segland.com/url/p2gts5wpzxkuqryq',src:'leases/CAN-003.pdf',sub:'Recorded lease · Vol 753, Pg 211 · 3 pages'},
-  'CAN-004':{url:'https://filecloud.segland.com/url/tdgqvffvjcbg3jbw',src:'leases/CAN-004.pdf',sub:'Recorded lease · Vol 783, Pg 457 · 2 pages'},
-  'CAN-005':{url:'https://filecloud.segland.com/url/azmca4zibhhewhn2',src:'leases/CAN-005.pdf',sub:'Recorded lease · Vol 2877, Pg 324 · 2 pages'},
-  'CAN-006':{url:'https://filecloud.segland.com/url/jeubbti6xpxjrbae',src:'leases/CAN-006.pdf',sub:'Recorded lease + ratification (3193/145) + amended ratification (3267/217) · Vol 2883, Pg 308 · 4 pages'},
-  'CAN-007':{url:'https://filecloud.segland.com/url/tgrutr3qzsm2jfhr',src:'leases/CAN-007.pdf',sub:'Recorded lease · Vol 3193, Pg 155 · 2 pages'},
-  'CAN-008':{url:'https://filecloud.segland.com/url/aa22mcuxra2aghcy',src:'leases/CAN-008.pdf',sub:'Recorded lease · Vol 3193, Pg 157 · 2 pages'},
-  'CAN-009':{url:'https://filecloud.segland.com/url/racae7tcmvqajdgu',src:'leases/CAN-009.pdf',sub:'Recorded lease · Vol 3193, Pg 143 · 2 pages'},
-  'CAN-010':{url:'https://filecloud.segland.com/url/a6gkdqvh2xnnkizc',src:'leases/CAN-010.pdf',sub:'Recorded lease · Vol 3193, Pg 148 · 2 pages'},
-  'CAN-011':{url:'https://filecloud.segland.com/url/wicx3ufmv2uzwvfg',src:'leases/CAN-011.pdf',sub:'Recorded lease · Vol 3193, Pg 150 · 2 pages'},
-  'CAN-012':{url:'https://filecloud.segland.com/url/xscaniiqwcrdfx4d',src:'leases/CAN-012.pdf',sub:'Recorded lease · Vol 3193, Pg 153 · 2 pages'},
-  'CAN-013':{url:'https://filecloud.segland.com/url/wdspckushdypmqa6',src:'leases/CAN-013.pdf',sub:'Recorded lease · Vol 3193, Pg 159 · 3 pages'},
-  'CAN-014':{url:'https://filecloud.segland.com/url/ppcpyciivdfwr2ki',src:'leases/CAN-014.pdf',sub:'Recorded lease · Vol 3193, Pg 162 · 3 pages'},
-  'CAN-016':{url:'https://filecloud.segland.com/url/iqn4xymzgmbzunjg',src:'leases/CAN-016.pdf',sub:'Recorded lease · Vol 3267, Pg 219 · 2 pages'},
-  'CAN-017':{url:'https://filecloud.segland.com/url/yuqykj6mgwiwybzk',src:'leases/CAN-017.pdf',sub:'Recorded lease · Vol 3319, Pg 85 · 2 pages'},
-  'CAN-018':{url:'https://filecloud.segland.com/url/cntsej5ctdqugimf',src:'leases/CAN-018.pdf',sub:'Recorded lease · Vol 3347, Pg 236 · 2 pages'},
-  'CAN-019':{url:'https://filecloud.segland.com/url/uexsqhd6sbzhcdmd',src:'leases/CAN-019.pdf',sub:'Recorded lease · Vol 3513, Pg 116 · 2 pages'},
-  'CAN-021':{url:'https://filecloud.segland.com/url/vmy3urkuih3s2kfi',src:'leases/CAN-021.pdf',sub:'Recorded lease · Vol 3560, Pg 133 · 5 pages'},
-  'CAN-022':{url:'https://filecloud.segland.com/url/zczhnuxvxag7nnqy',src:'leases/CAN-022.pdf',sub:'Recorded lease · Vol 3849, Pg 115 · 2 pages'},
-  'CAN-024':{url:'https://filecloud.segland.com/url/qhcus4pktqjiyrwi',src:'leases/CAN-024.pdf',sub:'Recorded lease · Vol 3936, Pg 148 · 3 pages'},
-  'CAN-025':{url:'https://filecloud.segland.com/url/vgktwgrmf3wpbvwy',src:'leases/CAN-025.pdf',sub:'Recorded lease · Vol 3936, Pg 154 · 3 pages'},
-  'CAN-027':{url:'https://filecloud.segland.com/url/2jctjexddh2wjkzd',src:'leases/CAN-027.pdf',sub:'Recorded lease + memorandum · Inst 2025-000010836 · 8 pages'},
-  'CAN-028':{url:'https://filecloud.segland.com/url/irubzgcvbidvvix4',src:'leases/CAN-028.pdf',sub:'Recorded lease + memorandum · Inst 2025-000006993 · 9 pages'},
-  'CAN-029':{url:'https://filecloud.segland.com/url/zgxzbjh6wwybk2gw',src:'leases/CAN-029.pdf',sub:'Recorded lease + memorandum · Inst 2025-000006983 · 8 pages'}
+  'CAN-001':{url:'https://filecloud.segland.com/url/yaut6juytkfirtrv',sub:'Recorded lease · Vol 3193, Pg 146 · 2 pages'},
+  'CAN-002':{url:'https://filecloud.segland.com/url/haxd6gzrcenduuan',sub:'Recorded lease · Vol 753, Pg 205 · 2 pages'},
+  'CAN-003':{url:'https://filecloud.segland.com/url/p2gts5wpzxkuqryq',sub:'Recorded lease · Vol 753, Pg 211 · 3 pages'},
+  'CAN-004':{url:'https://filecloud.segland.com/url/tdgqvffvjcbg3jbw',sub:'Recorded lease · Vol 783, Pg 457 · 2 pages'},
+  'CAN-005':{url:'https://filecloud.segland.com/url/azmca4zibhhewhn2',sub:'Recorded lease · Vol 2877, Pg 324 · 2 pages'},
+  'CAN-006':{url:'https://filecloud.segland.com/url/jeubbti6xpxjrbae',sub:'Recorded lease + ratification (3193/145) + amended ratification (3267/217) · Vol 2883, Pg 308 · 4 pages'},
+  'CAN-007':{url:'https://filecloud.segland.com/url/tgrutr3qzsm2jfhr',sub:'Recorded lease · Vol 3193, Pg 155 · 2 pages'},
+  'CAN-008':{url:'https://filecloud.segland.com/url/aa22mcuxra2aghcy',sub:'Recorded lease · Vol 3193, Pg 157 · 2 pages'},
+  'CAN-009':{url:'https://filecloud.segland.com/url/racae7tcmvqajdgu',sub:'Recorded lease · Vol 3193, Pg 143 · 2 pages'},
+  'CAN-010':{url:'https://filecloud.segland.com/url/a6gkdqvh2xnnkizc',sub:'Recorded lease · Vol 3193, Pg 148 · 2 pages'},
+  'CAN-011':{url:'https://filecloud.segland.com/url/wicx3ufmv2uzwvfg',sub:'Recorded lease · Vol 3193, Pg 150 · 2 pages'},
+  'CAN-012':{url:'https://filecloud.segland.com/url/xscaniiqwcrdfx4d',sub:'Recorded lease · Vol 3193, Pg 153 · 2 pages'},
+  'CAN-013':{url:'https://filecloud.segland.com/url/wdspckushdypmqa6',sub:'Recorded lease · Vol 3193, Pg 159 · 3 pages'},
+  'CAN-014':{url:'https://filecloud.segland.com/url/ppcpyciivdfwr2ki',sub:'Recorded lease · Vol 3193, Pg 162 · 3 pages'},
+  'CAN-016':{url:'https://filecloud.segland.com/url/iqn4xymzgmbzunjg',sub:'Recorded lease · Vol 3267, Pg 219 · 2 pages'},
+  'CAN-017':{url:'https://filecloud.segland.com/url/yuqykj6mgwiwybzk',sub:'Recorded lease · Vol 3319, Pg 85 · 2 pages'},
+  'CAN-018':{url:'https://filecloud.segland.com/url/cntsej5ctdqugimf',sub:'Recorded lease · Vol 3347, Pg 236 · 2 pages'},
+  'CAN-019':{url:'https://filecloud.segland.com/url/uexsqhd6sbzhcdmd',sub:'Recorded lease · Vol 3513, Pg 116 · 2 pages'},
+  'CAN-021':{url:'https://filecloud.segland.com/url/vmy3urkuih3s2kfi',sub:'Recorded lease · Vol 3560, Pg 133 · 5 pages'},
+  'CAN-022':{url:'https://filecloud.segland.com/url/zczhnuxvxag7nnqy',sub:'Recorded lease · Vol 3849, Pg 115 · 2 pages'},
+  'CAN-024':{url:'https://filecloud.segland.com/url/qhcus4pktqjiyrwi',sub:'Recorded lease · Vol 3936, Pg 148 · 3 pages'},
+  'CAN-025':{url:'https://filecloud.segland.com/url/vgktwgrmf3wpbvwy',sub:'Recorded lease · Vol 3936, Pg 154 · 3 pages'},
+  'CAN-027':{url:'https://filecloud.segland.com/url/2jctjexddh2wjkzd',sub:'Recorded lease + memorandum · Inst 2025-000010836 · 8 pages'},
+  'CAN-028':{url:'https://filecloud.segland.com/url/irubzgcvbidvvix4',sub:'Recorded lease + memorandum · Inst 2025-000006993 · 9 pages'},
+  'CAN-029':{url:'https://filecloud.segland.com/url/zgxzbjh6wwybk2gw',sub:'Recorded lease + memorandum · Inst 2025-000006983 · 8 pages'}
 };
 // contract numbers that should have a lease file; the ones without a file yet say so
 const LEASETEST=/^CAN-/;
