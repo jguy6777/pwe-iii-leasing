@@ -1213,7 +1213,7 @@ const OFFPLAT=new Set(['TX203-0075-011']);
 // Check requests, W-9s, purchase notices and title papers are removed and SSNs blacked out before a file is added here.
 const LEASEDOCS={
   'CAN-001':{src:'leases/CAN-001.pdf',sub:'Recorded lease · Vol 3193, Pg 146 · 2 pages'},
-  'CAN-002':{src:'leases/CAN-002.pdf',sub:'Recorded lease · Vol 753, Pg 205 · 2 pages'},
+  'CAN-002':{url:'https://filecloud.segland.com/url/haxd6gzrcenduuan',src:'leases/CAN-002.pdf',sub:'Recorded lease · Vol 753, Pg 205 · 2 pages'},
   'CAN-003':{src:'leases/CAN-003.pdf',sub:'Recorded lease · Vol 753, Pg 211 · 3 pages'},
   'CAN-004':{src:'leases/CAN-004.pdf',sub:'Recorded lease · Vol 783, Pg 457 · 2 pages'},
   'CAN-005':{src:'leases/CAN-005.pdf',sub:'Recorded lease · Vol 2877, Pg 324 · 2 pages'},
@@ -1728,14 +1728,19 @@ $('#d-close').onclick=closeDrawer; $('#scrim').onclick=closeDrawer;
 // View lease buttons (record drawer + tract panel) open the recorded lease from LEASEDOCS in the document viewer;
 // pages are drawn with pdf.js (loaded on first use) into one tall image so the plat viewer's zoom/pan works on it.
 function leaseBtn(lno,big){ if(!lno) return '';
+  if(LEASEDOCS[lno]&&LEASEDOCS[lno].url) return `<div class="lbtns" style="margin-bottom:10px">${leaseExt(lno,big?'btn pri':'pdoc','View lease '+esc(lno))}</div>`;
   if(LEASEDOCS[lno]) return `<div class="lbtns" style="margin-bottom:10px"><button class="${big?'btn pri':'pdoc'}" type="button" data-lease="${esc(lno)}">${DOCICON}<span>View lease ${esc(lno)}</span></button></div>`;
   return LEASETEST.test(lno)?`<div class="lnone" style="margin-bottom:8px">No lease file linked yet for ${esc(lno)}</div>`:''; }
 function leaseList(rows){ const ls=[...new Set(rows.map(r=>r.lno).filter(Boolean))].sort();
   const show=ls.filter(l=>LEASEDOCS[l]||LEASETEST.test(l)); if(!show.length) return '';
-  return `<div><div class="lbl" style="margin-bottom:6px">Leases on this tract</div><div class="lbtns">${show.map(l=>LEASEDOCS[l]
+  return `<div><div class="lbl" style="margin-bottom:6px">Leases on this tract</div><div class="lbtns">${show.map(l=>LEASEDOCS[l]&&LEASEDOCS[l].url?leaseExt(l,'pdoc',esc(l)):LEASEDOCS[l]
     ?`<button class="pdoc" type="button" data-lease="${esc(l)}" data-tip="${esc(LEASEDOCS[l].sub)}">${DOCICON}<span>${esc(l)}</span></button>`
     :`<span class="pdoc lmiss" data-tip="No lease file linked yet">${esc(l)}</span>`).join('')}</div></div>`; }
-function wireLeases(root){ (root||document).querySelectorAll('[data-lease]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); openLease(b.dataset.lease); }); }
+// a lease kept on FileCloud (public share link, `url` in LEASEDOCS) opens there in a new tab instead of the built-in viewer
+const EXTICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
+function leaseExt(lno,cls,label){ const d=LEASEDOCS[lno]; return `<a class="${cls}" href="${esc(d.url)}" target="_blank" rel="noopener" data-lext="${esc(lno)}" data-tip="${esc(d.sub)} · opens in FileCloud" style="text-decoration:none">${DOCICON}<span>${label}</span>${EXTICON}</a>`; }
+function wireLeases(root){ (root||document).querySelectorAll('[data-lease]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); openLease(b.dataset.lease); });
+  (root||document).querySelectorAll('[data-lext]').forEach(a=>a.onclick=e=>e.stopPropagation()); }
 let PDFJS=null;
 function loadPdfJs(){ if(PDFJS) return PDFJS; const base='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
   const add=src=>new Promise((res,rej)=>{ const sc=document.createElement('script'); sc.src=src; sc.onload=res; sc.onerror=()=>rej(new Error('Could not load '+src)); document.head.appendChild(sc); });
@@ -1773,7 +1778,7 @@ async function renderPage(p,sc){ const vp=p.pg.getViewport({scale:p.k*sc}), c=do
   try{ await t.promise; }catch(e){ c.width=c.height=0; if(p.task===t) p.task=null; if(e&&e.name==='RenderingCancelledException') return; throw e; }
   if(p.task!==t||!p.el){ c.width=c.height=0; return; } p.task=null;
   if(p.cv){ p.cv.width=p.cv.height=0; p.cv.remove(); } p.cv=c; p.rs=sc; p.el.appendChild(c); }
-async function openLease(lno){ const d=LEASEDOCS[lno]; if(!d) return; unmountLease(); DV.doc=null; DV.lease=lno;
+async function openLease(lno){ const d=LEASEDOCS[lno]; if(!d) return; if(d.url){ window.open(d.url,'_blank','noopener'); return; } unmountLease(); DV.doc=null; DV.lease=lno;
   const rr=DATA.find(r=>r.lno===lno); $('#dv-title').textContent=`Lease ${lno}${rr&&rr.lessor?' · '+title(rr.lessor):''}`; $('#dv-sub').textContent=d.sub;
   const a=$('#dv-pdf'); a.href=d.src; a.hidden=false; const msg=$('#dv-msg'); $('#dv-img').hidden=true; $('#dv-z').textContent='';
   $('#docv').hidden=false; $('#dv-close').focus(); msg.hidden=false; msg.textContent='Loading lease…';

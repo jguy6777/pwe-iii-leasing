@@ -6,7 +6,7 @@ const OFFPLAT=new Set(['TX203-0075-011']);
 // Check requests, W-9s, purchase notices and title papers are removed and SSNs blacked out before a file is added here.
 const LEASEDOCS={
   'CAN-001':{src:'leases/CAN-001.pdf',sub:'Recorded lease · Vol 3193, Pg 146 · 2 pages'},
-  'CAN-002':{src:'leases/CAN-002.pdf',sub:'Recorded lease · Vol 753, Pg 205 · 2 pages'},
+  'CAN-002':{url:'https://filecloud.segland.com/url/haxd6gzrcenduuan',src:'leases/CAN-002.pdf',sub:'Recorded lease · Vol 753, Pg 205 · 2 pages'},
   'CAN-003':{src:'leases/CAN-003.pdf',sub:'Recorded lease · Vol 753, Pg 211 · 3 pages'},
   'CAN-004':{src:'leases/CAN-004.pdf',sub:'Recorded lease · Vol 783, Pg 457 · 2 pages'},
   'CAN-005':{src:'leases/CAN-005.pdf',sub:'Recorded lease · Vol 2877, Pg 324 · 2 pages'},
