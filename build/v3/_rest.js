@@ -193,7 +193,16 @@ const closeDoc=()=>{ $('#docv').hidden=true; };
 $('#dv-close').onclick=closeDoc; $('#dv-fit').onclick=()=>dvFit(false); $('#dv-w').onclick=()=>dvFit(true); $('#dv-in').onclick=()=>dvZoom(1.25); $('#dv-out').onclick=()=>dvZoom(1/1.25);
 document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return; if(!$('#docv').hidden) closeDoc(); else if(!$('#drawer').hidden) closeDrawer(); else if(PL.tract) unselectTract(); });
 (function(){ const box=$('#dvb'); let dr=null;
-  box.addEventListener('wheel',e=>{ e.preventDefault(); const b=box.getBoundingClientRect(); dvZoom(e.deltaY>0?1/1.15:1.15,e.clientX-b.left,e.clientY-b.top); },{passive:false});
+  // leases: wheel scrolls the pages (Shift+wheel sideways); Ctrl+wheel or trackpad pinch still zooms. Plats keep wheel-to-zoom.
+  const clamp=(v,lo,hi)=>lo>hi?(lo+hi)/2:Math.min(hi,Math.max(lo,v));
+  function dvScroll(dx,dy){ const b=box.getBoundingClientRect(), im=$('#dv-img'), w=im.naturalWidth*DV.s, h=im.naturalHeight*DV.s;
+    DV.x=clamp(DV.x-dx,b.width-w-16,16); DV.y=clamp(DV.y-dy,b.height-h-16,16); dvApply(); }
+  box.addEventListener('wheel',e=>{ e.preventDefault(); const b=box.getBoundingClientRect();
+    if(DV.lease&&!e.ctrlKey&&!e.metaKey){ let dx=e.deltaX, dy=e.deltaY; const m=e.deltaMode===1?40:e.deltaMode===2?b.height:1; dx*=m; dy*=m;
+      if(e.shiftKey&&!dx){ dx=dy; dy=0; } dvScroll(dx,dy); return; }
+    dvZoom(e.deltaY>0?1/1.15:1.15,e.clientX-b.left,e.clientY-b.top); },{passive:false});
+  box.tabIndex=-1; box.addEventListener('keydown',e=>{ if(!DV.lease) return; const b=box.getBoundingClientRect(), k={ArrowDown:[0,60],ArrowUp:[0,-60],PageDown:[0,b.height*.9],PageUp:[0,-b.height*.9],' ':[0,b.height*.9]}[e.key];
+    if(k){ e.preventDefault(); dvScroll(k[0],k[1]); } });
   box.addEventListener('pointerdown',e=>{ dr={x:e.clientX,y:e.clientY,ox:DV.x,oy:DV.y}; box.setPointerCapture(e.pointerId); box.classList.add('panning'); });
   box.addEventListener('pointermove',e=>{ if(!dr) return; DV.x=dr.ox+e.clientX-dr.x; DV.y=dr.oy+e.clientY-dr.y; dvApply(); });
   const up=()=>{ dr=null; box.classList.remove('panning'); }; box.addEventListener('pointerup',up); box.addEventListener('pointercancel',up);
