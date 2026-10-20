@@ -46,12 +46,22 @@ function renderSide(){
     wireLeases(el);
     return; }
   const rows=filtered({noLs:true});
-  const all=[...new Set(rows.map(r=>r.id))].map(id=>({id,S:TSTAT[id]})).sort((a,b)=>(b.S.t-b.S.l)-(a.S.t-a.S.l)||String(TNUM[a.id]||a.id).localeCompare(String(TNUM[b.id]||b.id),undefined,{numeric:true}));
-  const open=all.filter(x=>x.S.t-x.S.l>1e-6), cnt={L:0,P:0,U:0,Z:0}; all.forEach(x=>cnt[x.S.s]++);
-  el.innerHTML=`<div class="tcount">${['L','P','U','Z'].map(k=>`<span>${swatch(k)}${PST[k].label} <b>${fmt(cnt[k])}</b></span>`).join('')}</div>
-    <div class="lbl">Tracts with unleased interest · ${fmt(open.length)}</div>
-    <div class="olist">${open.slice(0,40).map(x=>`<button type="button" class="orow" data-t="${esc(x.id)}">${swatch(x.S.s)}<span class="on">${TNUM[x.id]?'Tract '+esc(TNUM[x.id]):esc(x.id)}${state.unit?'':' · '+esc(ushort(x.S.unit))}<small>${esc(x.id)} · ${fmt(x.S.p*100,1)}% leased${SHP_IDS.has(x.id)?'':' · no parcel shape'}</small></span><b>${fmt(x.S.t-x.S.l,2)}<em>ac</em></b></button>`).join('')||'<div class="empty">Every tract in this view is fully leased.</div>'}</div>
+  // every tract in the view, unleased first; chips filter the list by status (All by default)
+  const ORD={U:0,P:1,L:2,Z:3}, open=x=>x.S.t-x.S.l;
+  const all=[...new Set(rows.map(r=>r.id))].map(id=>({id,S:TSTAT[id]})).sort((a,b)=>(ORD[a.S.s]??9)-(ORD[b.S.s]??9)||open(b)-open(a)||String(TNUM[a.id]||a.id).localeCompare(String(TNUM[b.id]||b.id),undefined,{numeric:true}));
+  const cnt={L:0,P:0,U:0,Z:0}; all.forEach(x=>cnt[x.S.s]=(cnt[x.S.s]||0)+1);
+  const tf=PL.tf&&PL.tf!=='A'&&cnt[PL.tf]?PL.tf:'A', shown=tf==='A'?all:all.filter(x=>x.S.s===tf), byOpen=tf==='U'||tf==='P';
+  const chip=(k,label,n,sw)=>`<button type="button" class="tchip" data-tf="${k}" aria-pressed="${tf===k}" ${n?'':'disabled'}>${sw||''}${label} <b>${fmt(n)}</b></button>`;
+  const head={A:'All tracts',U:'Unleased tracts',P:'Partially leased tracts',L:'Leased tracts',Z:'Tracts with no net interest'}[tf];
+  const row=x=>{ const o=open(x), nm=`${TNUM[x.id]?'Tract '+esc(TNUM[x.id]):esc(x.id)}${state.unit?'':' · '+esc(ushort(x.S.unit))}`;
+    const sub=`${esc(x.id)} · ${fmt(x.S.p*100,1)}% leased${!byOpen&&o>1e-6?' · '+fmt(o,2)+' ac open':''}${SHP_IDS.has(x.id)?'':' · no parcel shape'}`;
+    const val=byOpen?`${fmt(o,2)}<em>ac open</em>`:`${fmt(x.S.t,2)}<em>net ac</em>`;
+    return `<button type="button" class="orow" data-t="${esc(x.id)}">${swatch(x.S.s)}<span class="on">${nm}<small>${sub}</small></span><b>${val}</b></button>`; };
+  el.innerHTML=`<div class="tcount tchips" role="group" aria-label="Filter tracts by status">${chip('A','All',all.length)}${['L','P','U','Z'].map(k=>chip(k,PST[k].label,cnt[k],swatch(k))).join('')}</div>
+    <div class="lbl">${head} · ${fmt(shown.length)}</div>
+    <div class="olist">${shown.map(row).join('')||'<div class="empty">No tracts in this view.</div>'}</div>
     <p class="note">Click a tract on the map or in this list for its owners and leases.</p>`;
+  el.querySelectorAll('.tchip').forEach(b=>b.onclick=()=>{ PL.tf=b.dataset.tf; renderSide(); });
   el.querySelectorAll('.orow').forEach(b=>b.onclick=()=>{ PL.tract=b.dataset.t; renderPlat(); zoomTract(b.dataset.t); if(typeof showMap==='function') showMap(); });
 }
 $$('#pl-shade button').forEach(b=>b.onclick=()=>{ PL.shade=b.dataset.v; try{localStorage.setItem('pwe-shade',PL.shade)}catch(e){} renderPlat(); });
