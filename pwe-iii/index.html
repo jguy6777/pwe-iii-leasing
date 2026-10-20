@@ -1632,9 +1632,9 @@ function renderSide(){
     wireLeases(el);
     return; }
   const rows=filtered({noLs:true});
-  // every tract in the view, unleased first; chips filter the list by status (All by default)
-  const ORD={U:0,P:1,L:2,Z:3}, open=x=>x.S.t-x.S.l;
-  const all=[...new Set(rows.map(r=>r.id))].map(id=>({id,S:TSTAT[id]})).sort((a,b)=>(ORD[a.S.s]??9)-(ORD[b.S.s]??9)||open(b)-open(a)||String(TNUM[a.id]||a.id).localeCompare(String(TNUM[b.id]||b.id),undefined,{numeric:true}));
+  // every tract in the view in plat tract order (1, 2, 3 … 17, 17A …; tracts without a plat number last, by ID); chips filter the list by status (All by default)
+  const open=x=>x.S.t-x.S.l, cmpT=(a,b)=>(!TNUM[a.id])-(!TNUM[b.id])||String(TNUM[a.id]||'').localeCompare(String(TNUM[b.id]||''),undefined,{numeric:true})||a.id.localeCompare(b.id,undefined,{numeric:true});
+  const all=[...new Set(rows.map(r=>r.id))].map(id=>({id,S:TSTAT[id]})).sort(cmpT);
   const cnt={L:0,P:0,U:0,Z:0}; all.forEach(x=>cnt[x.S.s]=(cnt[x.S.s]||0)+1);
   const tf=PL.tf&&PL.tf!=='A'&&cnt[PL.tf]?PL.tf:'A', shown=tf==='A'?all:all.filter(x=>x.S.s===tf), byOpen=tf==='U'||tf==='P';
   const chip=(k,label,n,sw)=>`<button type="button" class="tchip" data-tf="${k}" aria-pressed="${tf===k}" ${n?'':'disabled'}>${sw||''}${label} <b>${fmt(n)}</b></button>`;
