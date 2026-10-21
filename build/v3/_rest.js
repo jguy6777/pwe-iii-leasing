@@ -2,11 +2,11 @@ const EXTICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 // dates arrive as YYYY-MM-DD; show mm/dd/yyyy, sort on the stored value
 const mdy=v=>{ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v||''); return m?`${m[2]}/${m[3]}/${m[1]}`:(v||''); };
 function renderUnitHead(){
-  const u=state.unit, rr=filtered(), p=pctOf(rr), base=filtered({noLs:true}), pb=pctOf(base), doc=PLATDOCS[u], i=UNITS.indexOf(u);
+  const u=state.unit, rr=scope(filtered()), p=pctOf(rr), base=scope(filtered({noLs:true})), pb=pctOf(base), doc=PLATDOCS[u], i=UNITS.indexOf(u), nRec=filtered().length;
   const meta=u?(doc?`Survey plat ${doc.short} · called ${fmt(PLATCALL[u],3)} ac`:PLATCALL[u]?`${PLATNOTE[u]||'Plat not attached'} · called ${fmt(PLATCALL[u],3)} ac`:u===OUT?'Tracts outside the gas units':`${fmt(tracts(rr))} tracts · no survey plat yet`):`${UNITS.filter(x=>x!==OUT).length} units · pick one from the list or the map`;
   $('#uhead').innerHTML=`<div class="navb"><button class="ibtn" type="button" id="u-prev" aria-label="Previous unit" ${!u||i<=0?'disabled':''}>‹</button><button class="ibtn" type="button" id="u-next" aria-label="Next unit" ${u&&i>=UNITS.length-1?'disabled':''}>›</button></div>
     <div><h2>${esc(u?bl(u):'All units')}</h2><div class="meta">${esc(meta)}</div></div>
-    <div class="uacts">${doc&&doc.url?`<a class="btn pri" href="${esc(doc.url)}" target="_blank" rel="noopener" data-lext="plat" data-tip="${esc(doc.sub)} · opens in FileCloud" style="text-decoration:none">${DOCICON}<span>Survey plat</span>${EXTICON}</a>`:doc?`<button class="btn pri" type="button" data-doc="${esc(u)}">${DOCICON}<span>Survey plat</span></button>`:`<button class="btn" type="button" disabled>${DOCICON}<span>${u?'No survey plat attached':'Survey plat'}</span></button>`}<button class="btn" type="button" id="u-recs">View ${fmt(rr.length)} records</button></div>
+    <div class="uacts">${doc&&doc.url?`<a class="btn pri" href="${esc(doc.url)}" target="_blank" rel="noopener" data-lext="plat" data-tip="${esc(doc.sub)} · opens in FileCloud" style="text-decoration:none">${DOCICON}<span>Survey plat</span>${EXTICON}</a>`:doc?`<button class="btn pri" type="button" data-doc="${esc(u)}">${DOCICON}<span>Survey plat</span></button>`:`<button class="btn" type="button" disabled>${DOCICON}<span>${u?'No survey plat attached':'Survey plat'}</span></button>`}<button class="btn" type="button" id="u-recs">View ${fmt(nRec)} records</button></div>
     <div class="stats">${stat('% leased',pctTxt(p),'')}${stat('Unit acres · plat',u===OUT?'–':fmt(unitAc(rr),3),u===OUT?'':'ac')}${stat('<i class="sw" style="background:var(--s-acq)"></i>Leased',fmt(pb.l,2),'ac')}${stat('<i class="sw" style="background:var(--s-work)"></i>Unleased',fmt(pb.u,2),'ac')}</div>`;
   $('#u-prev').onclick=()=>{ if(i>0) setUnit(UNITS[i-1]); };
   $('#u-next').onclick=()=>{ setUnit(u?UNITS[i+1]:UNITS[0]); };
@@ -23,7 +23,7 @@ function renderPlat(){
   if(PL.fitKey!==state.unit) fitPlat();
   setBase(MP); drawMap(MP);
   $('#pl-leg').innerHTML=legendHtml();
-  const miss=MISSING.filter(id=>!state.unit||TSTAT[id].unit===state.unit);
+  const miss=MISSING.filter(id=>state.unit?TSTAT[id].unit===state.unit:TSTAT[id].unit!==OUT);
   $('#pl-foot').textContent=(state.unit===OUT?'Outside tracts sit around the units, so the whole parcel map is shown. ':'')+(miss.length?`${fmt(miss.length)} tract${miss.length>1?'s':''} in this view have no parcel shape (${fmt(miss.reduce((a,id)=>a+TSTAT[id].t,0),2)} net ac); they still count in every total.`:'Every tract in this view has a parcel shape.');
   renderSide();
 }
@@ -45,7 +45,7 @@ function renderSide(){
     el.querySelectorAll('.orow').forEach(b=>b.onclick=()=>openDrawer(DATA[+b.dataset.i]));
     wireLeases(el);
     return; }
-  const rows=filtered({noLs:true});
+  const rows=scope(filtered({noLs:true})), outN=state.unit?0:tracts(filtered({noLs:true}).filter(r=>r.unitL===OUT));
   // every tract in the view in plat tract order (1, 2, 3 … 17, 17A …; tracts without a plat number last, by ID); chips filter the list by status (All by default)
   const open=x=>x.S.t-x.S.l, cmpT=(a,b)=>(!TNUM[a.id])-(!TNUM[b.id])||String(TNUM[a.id]||'').localeCompare(String(TNUM[b.id]||''),undefined,{numeric:true})||a.id.localeCompare(b.id,undefined,{numeric:true});
   const all=[...new Set(rows.map(r=>r.id))].map(id=>({id,S:TSTAT[id]})).sort(cmpT);
@@ -60,7 +60,7 @@ function renderSide(){
   el.innerHTML=`<div class="tcount tchips" role="group" aria-label="Filter tracts by status">${chip('A','All',all.length)}${['L','P','U','Z'].map(k=>chip(k,PST[k].label,cnt[k],swatch(k))).join('')}</div>
     <div class="lbl">${head} · ${fmt(shown.length)}</div>
     <div class="olist">${shown.map(row).join('')||'<div class="empty">No tracts in this view.</div>'}</div>
-    <p class="note">Click a tract on the map or in this list for its owners and leases.</p>`;
+    <p class="note">Click a tract on the map or in this list for its owners and leases.${outN?` ${fmt(outN)} tracts outside the units aren't in this list or the unit totals; pick <b>Outside units</b> in the unit filter to see them.`:''}</p>`;
   el.querySelectorAll('.tchip').forEach(b=>b.onclick=()=>{ PL.tf=b.dataset.tf; renderSide(); });
   el.querySelectorAll('.orow').forEach(b=>b.onclick=()=>{ PL.tract=b.dataset.t; renderPlat(); zoomTract(b.dataset.t); if(typeof showMap==='function') showMap(); });
 }
@@ -73,14 +73,14 @@ const UNITL=(SBCOLS.find(c=>c.k==='unit')||{l:'Unit'}).l;
 const RLAB={BRK_LSE_NO:'Contract no.',TR_NUM:'Tract ID',CLIENT_UNIT:UNITL,ABSTRACT:'Abstract',ABSTRACT_NAME:'Abstract name',STATE:'State',TRACT_COUNTY:'County',TRACT_ACRES:'Tract ac',MIN_INT:'Min int',NET_AC:'Net ac',
   ASSOCIATEID:'Owner ID',MINERAL_OWNER:'Mineral owner',ADDRESS:'Address',PHONE_NO:'Phone',HELD_BY:'Held by',LEASING_STATUS:'Landowner status',ORIGINAL_LESSOR:'Original lessor',LESSOR:'Lessor',CURRENT_LESSEE:'Current lessee',
   CLIENT_LEASE_NO:'Client lease no.',SYMBOL:'Symbol',VOL_PAGE:'Vol/Page',EFFECTIVE_DATE:'Effective',EXPIRATION_DATE:'Expires',LSE_GROSS_AC:'Lease gross ac',LSE_NET_AC:'Lease net ac',BONUS_PER_AC:'Bonus/ac',ROYALTY:'Royalty',
-  TERM:'Term',OPTION_TERM:'Option term',OPTION_EXP_DATE:'Option expires',OPT_BONUS_PER_AC:'Option bonus/ac',BONUS_TOTAL:'Bonus total',OPT_BONUS_TOTAL:'Option bonus total',Breech_of_Contract:'Breach of contract'};
+  TERM:'Term','Producing_Blocks___No_production_Sharing_of_Allocation_Wells:':'Producing blocks',OPTION_TERM:'Option term',OPTION_EXP_DATE:'Option expires',OPT_BONUS_PER_AC:'Option bonus/ac',BONUS_TOTAL:'Bonus total',OPT_BONUS_TOTAL:'Option bonus total',Breech_of_Contract:'Breach of contract'};
 const RNUM={TRACT_ACRES:3,MIN_INT:8,NET_AC:4,LSE_GROSS_AC:3,LSE_NET_AC:4,ROYALTY:4,BONUS_PER_AC:2,OPT_BONUS_PER_AC:2,BONUS_TOTAL:2,OPT_BONUS_TOTAL:2};
 const RDATE=new Set(['EFFECTIVE_DATE','EXPIRATION_DATE','OPTION_EXP_DATE']), RTAG=new Set(['MINERAL_OWNER','LESSOR','ORIGINAL_LESSOR']);
 const hum=s=>{ s=String(s).replace(/:+$/,'').replace(/_+/g,' ').trim(); return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase(); };
-DATA.forEach((r,i)=>{ const v=REC.v[i]; REC.cols.forEach((c,j)=>{ let x=REC.u[v[j]]; if(RTAG.has(c)&&x) x=untag(x); if(c==='CLIENT_UNIT') x=r.unitL; r['x'+j]=x; }); });
+DATA.forEach((r,i)=>{ const v=REC.v[i]; REC.cols.forEach((c,j)=>{ let x=REC.u[v[j]]; if(RTAG.has(c)&&x) x=untag(x); if(c==='CLIENT_UNIT') x=r.unitL; if(typeof x==='string'&&/^[\s,]*$/.test(x)) x=null; r['x'+j]=x; }); });
 const COLS=REC.cols.map((c,j)=>({k:'x'+j,src:c,l:RLAB[c]||hum(c),r:c in RNUM||c==='ASSOCIATEID'||c==='ABSTRACT',d:RNUM[c],
   f:RDATE.has(c)?mdy:c==='CLIENT_UNIT'?bl:c==='LEASING_STATUS'?title:null,pill:c==='LEASING_STATUS',jump:c==='TR_NUM',net:c==='NET_AC',cls:c==='TR_NUM'?'id':c==='MINERAL_OWNER'?'own':''}));
-state.sort=(COLS.find(c=>c.src==='TR_NUM')||COLS[0]).k;
+state.sort=(COLS.find(c=>c.src==='CLIENT_UNIT')||COLS.find(c=>c.src==='TR_NUM')||COLS[0]).k; // units first (outside units last), then tract ID
 // Column widths follow the content: text columns whose longest value runs past ~22 characters wrap inside a capped width.
 (()=>{ const css=[]; COLS.forEach((c,i)=>{ if(c.r||RDATE.has(c.src)||c.pill||c.jump) return;
     const L=[]; for(const r of DATA){ const v=r[c.k]; if(v!=null&&v!=='') L.push(String(c.f?c.f(v):v).length); }
@@ -97,20 +97,23 @@ function rowHtml(r,i){ return `<tr tabindex="0" data-i="${i}">`+COLS.map(c=>{ le
     if(v==null||v===''||v===BLANK) return `<td class="${c.r?'r ':''}muted">–</td>`;
     v=c.d!=null?fmt(v,c.d):c.f?c.f(v):v;
     if(c.jump) return `<td class="${c.cls||''}"><button type="button" class="jump" data-jump="${esc(r.id)}" data-tip="Show on plat map">${esc(v)}</button></td>`;
-    return `<td class="${c.r?'r ':''}${c.cls||''}"${c.cls==='own'?` title="${esc(v)}"`:''}>${esc(v)}</td>`; }).join('')+'</tr>'; }
+    const long=typeof v==='string'&&v.length>44&&!c.cls; // long clause text stays to a short preview so rows keep an even height; full text on hover and in the Excel export
+    return `<td class="${c.r?'r ':''}${c.cls||''}"${c.cls==='own'||long?` title="${esc(v)}"`:''}>${esc(long?v.slice(0,v.lastIndexOf(' ',38)>20?v.lastIndexOf(' ',38):38).replace(/[\s,;:-]+$/,'')+'…':v)}</td>`; }).join('')+'</tr>'; }
 function moreRows(){ if(LL.shown>=listRows.length) return; const n=Math.min(listRows.length,LL.shown+LL.step);
   $('#llb').insertAdjacentHTML('beforeend',listRows.slice(LL.shown,n).map((r,j)=>rowHtml(r,LL.shown+j)).join('')); LL.shown=n; }
 $('#ll').addEventListener('scroll',e=>{ const el=e.currentTarget; if(el.scrollTop+el.clientHeight>el.scrollHeight-600) moreRows(); },{passive:true});
 function renderList(){
   if($('#pane-ll').hidden){ $('#llct').textContent=fmt(filtered({q:true}).length); LL.dirty=true; return; }
   LL.dirty=false;
-  $('#llh').innerHTML='<tr>'+COLS.map(c=>`<th class="${c.r?'r':''}${state.sort===c.k?' sorted':''}" data-k="${c.k}" scope="col">${c.l}<span class="ar">${state.sort===c.k?(state.dir>0?'▲':'▼'):'↕'}</span></th>`).join('')+'</tr>';
+  $('#llh').innerHTML='<tr>'+COLS.map(c=>`<th class="${c.r?'r':''}${state.sort===c.k?' sorted':''}" data-k="${c.k}" scope="col"${(RLAB[c.src]&&hum(c.src)!==c.l&&hum(c.src).length>c.l.length+6)?` title="${esc(hum(c.src))}"`:''}>${c.l}<span class="ar">${state.sort===c.k?(state.dir>0?'▲':'▼'):'↕'}</span></th>`).join('')+'</tr>';
   $$('#llh th').forEach(th=>th.onclick=()=>{ const k=th.dataset.k; if(state.sort===k) state.dir*=-1; else { state.sort=k; state.dir=COLS.find(c=>c.k===k).r?-1:1; } renderList(); });
   const rows=filtered({q:true}), k=state.sort, d=state.dir;
-  rows.sort((a,b)=>{ const x=a[k],y=b[k]; if((x==null||x==='')&&(y==null||y==='')) return 0; if(x==null||x==='') return 1; if(y==null||y==='') return -1;
-    return (typeof x==='number'&&typeof y==='number'?x-y:String(x).localeCompare(String(y),undefined,{numeric:true}))*d; });
+  const isU=(COLS.find(c=>c.k===k)||{}).src==='CLIENT_UNIT', tie=(a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true})||(b.cac||0)-(a.cac||0);
+  rows.sort((a,b)=>{ const x=a[k],y=b[k]; if((x==null||x==='')&&(y==null||y==='')) return tie(a,b); if(x==null||x==='') return 1; if(y==null||y==='') return -1;
+    return ((isU?sortU(x,y):typeof x==='number'&&typeof y==='number'?x-y:String(x).localeCompare(String(y),undefined,{numeric:true}))*d)||tie(a,b); });
   listRows=rows;
   $('#llShown').textContent=fmt(rows.length); $('#llTracts').textContent=fmt(tracts(rows)); $('#llAc').textContent=fmt(net(rows),2); $('#llct').textContent=fmt(rows.length);
+  const oR=state.unit?[]:rows.filter(r=>r.unitL===OUT); $('#llOut').innerHTML=oR.length?` · incl. ${fmt(tracts(oR))} outside-unit tracts (${fmt(net(oR),2)} ac), not in unit totals`:'';
   $('#ll').scrollTop=0;
   if(!rows.length){ $('#llb').innerHTML=`<tr><td colspan="${COLS.length}" class="empty">No records match. Clear a filter or the search.</td></tr>`; LL.shown=0; return; }
   $('#llb').innerHTML=''; LL.shown=0; moreRows();

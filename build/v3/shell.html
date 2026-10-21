@@ -343,6 +343,8 @@ td.r{font-family:var(--f-m);font-size:12px}
 #ll{max-height:calc(100vh - 260px);min-height:420px}
 #ll th{cursor:pointer;user-select:none;white-space:normal;overflow-wrap:normal;word-break:normal;vertical-align:bottom;line-height:1.35}
 #ll td{vertical-align:top}
+#sb tfoot tr.outr td{font-weight:400;color:var(--text-mid);background:transparent;border-top:1px dashed var(--border);cursor:pointer}
+#sb tfoot tr.outr:hover td{background:var(--wave-soft)}
 /* headings wrap between words; long text columns get widths from their content (see _rest.js) */
 #ll th{max-width:150px}
 #ll th .ar{opacity:.35;margin-left:4px}
@@ -512,7 +514,7 @@ td.r{font-family:var(--f-m);font-size:12px}
         <div class="llbar">
           <div class="left">
             <input type="search" id="q" placeholder="Search tract, owner, contract no., lessee…" aria-label="Search records">
-            <span class="count"><b id="llShown"></b> records · <b id="llTracts"></b> tracts · <b id="llAc"></b> net ac</span>
+            <span class="count"><b id="llShown"></b> records · <b id="llTracts"></b> tracts · <b id="llAc"></b> net ac<span id="llOut" class="muted"></span></span>
           </div>
           <div class="uacts"><button class="btn" type="button" id="ll-ov">← Overview</button><button class="btn" type="button" id="ll-un">Units &amp; plats</button><button class="btn pri" id="copy" type="button" title="Download the rows shown as an Excel table">Export to Excel</button></div>
         </div>
@@ -554,21 +556,27 @@ const anyOther=()=>['ls','sym','lessee','form','abs'].some(k=>state[k]);
 function renderKPIs(){
   const all=scope(filtered()), base=scope(filtered({noLs:true})), P=pctOf(base), ua=unitAc(all);
   const nUnits=new Set(all.map(r=>r.unitL)).size, openTr=new Set(base.filter(r=>r.g==='UNLEASED'&&r.cac>0).map(r=>r.id)).size;
+  const openRows=base.filter(r=>r.g==='UNLEASED'&&r.cac>0), openOw=owners(openRows), allOw=owners(base.filter(r=>r.cac>0));
+  const hasPlat=ua&&state.unit!==OUT, netMatch=hasPlat&&Math.abs(P.t-ua)<0.005;
   const dTxt=`<span class="d g">${P.t?fmt(P.p*100,1)+'% of net acres':'–'}</span>`;
   const T=[
-    `<div class="c kpi"><span class="kic">${ICON.map}</span><div><div class="k">Unit acres (plats)</div><div class="v">${state.unit===OUT?'–':fmt(ua,3)}<small>ac</small></div><div class="d m">${state.unit?esc(bl(state.unit)):fmt(nUnits)+' gas units'}</div></div></div>`,
-    `<div class="c kpi"><span class="kic">${ICON.stack}</span><div><div class="k">Net acres</div><div class="v">${fmt(P.t,2)}<small>ac</small></div><div class="d">${ua&&state.unit!==OUT?fmt(P.t/ua*100,1)+'% of plat acres':fmt(tracts(base))+' tracts'}</div></div></div>`,
+    // net acres equal to the plat acres: one tile says both; otherwise net acres lead and the plat share is the subline
+    netMatch?`<div class="c kpi" data-tip="Net acres in the export equal the plat acres"><span class="kic">${ICON.map}</span><div><div class="k">Unit acres (plats)</div><div class="v">${fmt(ua,3)}<small>ac</small></div><div class="d m">${state.unit?esc(bl(state.unit)):fmt(nUnits)+' units'} · net ac match</div></div></div>`
+      :`<div class="c kpi"><span class="kic">${ICON.map}</span><div><div class="k">Net acres</div><div class="v">${fmt(P.t,2)}<small>ac</small></div><div class="d m">${hasPlat?fmt(P.t/ua*100,1)+'% of plat acres':(state.unit?esc(bl(state.unit))+' · ':'')+fmt(tracts(base))+' tracts'}</div></div></div>`,
+    `<button type="button" class="c kpi" id="k-own" data-tip="${esc('Mineral owners with unleased net interest · click to list them in Records')}"><span class="kic">${ICON.stack}</span><div><div class="k">Owners to lease</div><div class="v">${fmt(openOw)}<small>of ${fmt(allOw)}</small></div><div class="d">${allOw?fmt((allOw-openOw)/allOw*100,1)+'% of owners leased':'–'}</div></div></button>`,
     `<button type="button" class="c kpi${state.ls==='LEASED'?' on':''}" data-g="LEASED"><span class="kic" style="color:var(--leased)">${ICON.check}</span><div><div class="k">Leased net acres</div><div class="v">${fmt(P.l,2)}<small>ac</small></div>${dTxt}</div></button>`,
     `<button type="button" class="c kpi${state.ls==='UNLEASED'?' on':''}" data-g="UNLEASED"><span class="kic" style="color:var(--unleased)">${ICON.open}</span><div><div class="k">Unleased net acres</div><div class="v">${fmt(P.u,2)}<small>ac</small></div><div class="d">${fmt(openTr)} tracts open</div></div></button>`];
   $('#kpis-l').innerHTML=T[0]+T[1]; $('#kpis-r').innerHTML=T[2]+T[3];
-  $$('.kpis button.kpi').forEach(b=>b.onclick=()=>toggle('ls',b.dataset.g));
+  $$('.kpis button.kpi[data-g]').forEach(b=>b.onclick=()=>toggle('ls',b.dataset.g));
+  $('#k-own').onclick=()=>{ state.ls='UNLEASED'; state.sort=(COLS.find(c=>c.src==='MINERAL_OWNER')||COLS[0]).k; state.dir=1; setTab('ll'); render(); };
 }
 
 let UBM='ac'; try{ const v=localStorage.getItem('pwe-ubm'); if(v==='ac'||v==='p') UBM=v; }catch(e){}
 function renderUnitBars(){
   const base=filtered({noUnit:true,noLs:true});
   const rows=UNITS.filter(u=>u!==OUT).map(u=>{ const rr=base.filter(r=>r.unitL===u), p=pctOf(rr); return {u,p}; }).filter(x=>x.p.t>0);
-  if(UBM==='p') rows.sort((a,b)=>a.p.p-b.p.p); else rows.sort((a,b)=>b.p.t-a.p.t);
+  if(UBM==='p') rows.sort((a,b)=>a.p.p-b.p.p); else rows.sort((a,b)=>b.p.u-a.p.u||b.p.t-a.p.t);
+  const sub=$('#ubars').closest('.c').querySelector('.ch .sub'); if(sub) sub.textContent=(UBM==='p'?'Lowest % leased first':'Most unleased acres first')+' · click a unit to filter';
   const max=Math.max(...rows.map(x=>x.p.t),1);
   $$('#ub-m button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===UBM));
   $('#ubars').innerHTML=rows.map(x=>{ const on=state.unit===x.u, w=UBM==='p'?100:x.p.t/max*100;
