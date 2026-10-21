@@ -80,32 +80,42 @@ const hum=s=>{ s=String(s).replace(/:+$/,'').replace(/_+/g,' ').trim(); return s
 DATA.forEach((r,i)=>{ const v=REC.v[i]; REC.cols.forEach((c,j)=>{ let x=REC.u[v[j]]; if(RTAG.has(c)&&x) x=untag(x); if(c==='CLIENT_UNIT') x=r.unitL; if(typeof x==='string'&&/^[\s,]*$/.test(x)) x=null; r['x'+j]=x; }); });
 const COLS=REC.cols.map((c,j)=>({k:'x'+j,src:c,l:RLAB[c]||hum(c),r:c in RNUM||c==='ASSOCIATEID'||c==='ABSTRACT',d:RNUM[c],
   f:RDATE.has(c)?mdy:c==='CLIENT_UNIT'?bl:c==='LEASING_STATUS'?title:null,pill:c==='LEASING_STATUS',jump:c==='TR_NUM',net:c==='NET_AC',cls:c==='TR_NUM'?'id':c==='MINERAL_OWNER'?'own':''}));
+COLS.forEach((c,i)=>c.ci='c'+i);
+// Records opens on the core columns; "All columns" adds the rest of the export (lease amounts, options, clause fields). Excel export always has every column.
+const CORE=new Set(['BRK_LSE_NO','TR_NUM','CLIENT_UNIT','TRACT_ACRES','MIN_INT','NET_AC','MINERAL_OWNER','ADDRESS','PHONE_NO','LEASING_STATUS','CURRENT_LESSEE','EFFECTIVE_DATE','EXPIRATION_DATE','ROYALTY']);
+let ALLC=false; try{ ALLC=localStorage.getItem('pwe-cols')==='all'; }catch(e){}
+let SC=COLS; const setSC=()=>{ SC=ALLC?COLS:COLS.filter(c=>CORE.has(c.src)); if(!SC.length) SC=COLS; };
+const DEFSORT=(COLS.find(c=>c.src==='CLIENT_UNIT')||COLS.find(c=>c.src==='TR_NUM')||COLS[0]).k;
 state.sort=(COLS.find(c=>c.src==='CLIENT_UNIT')||COLS.find(c=>c.src==='TR_NUM')||COLS[0]).k; // units first (outside units last), then tract ID
 // Column widths follow the content: text columns whose longest value runs past ~22 characters wrap inside a capped width.
 (()=>{ const css=[]; COLS.forEach((c,i)=>{ if(c.r||RDATE.has(c.src)||c.pill||c.jump) return;
     const L=[]; for(const r of DATA){ const v=r[c.k]; if(v!=null&&v!=='') L.push(String(c.f?c.f(v):v).length); }
     if(!L.length) return; L.sort((x,y)=>x-y); const m=L[L.length-1], p=L[Math.floor(L.length*.9)];
     if(m<=22) return; const w=p>45?200:p>28?160:p>16?130:110;   // typical (90th percentile) length sets the width; rare long values wrap
-    css.push(`#ll tr>*:nth-child(${i+1}){white-space:normal;width:${w}px;min-width:${w}px;max-width:${w}px}#ll td:nth-child(${i+1}){overflow-wrap:anywhere}`); });
+    css.push(`#ll .${c.ci}{white-space:normal;width:${w}px;min-width:${w}px;max-width:${w}px}#ll td.${c.ci}{overflow-wrap:anywhere}`); });
   const s=document.createElement('style'); s.textContent=css.join('\n'); document.head.appendChild(s); })();
 let listRows=[];
+$$('#ll-cols button').forEach(b=>b.onclick=()=>{ ALLC=b.dataset.c==='all'; try{localStorage.setItem('pwe-cols',ALLC?'all':'core')}catch(e){} const x=$('#ll').scrollLeft; renderList(); if(ALLC) $('#ll').scrollLeft=x; });
 // Records is built only while its tab is open, and drawn 200 rows at a time as you scroll (all rows still feed counts, search, sort and export).
 const LL={dirty:true,shown:0,step:200};
-function rowHtml(r,i){ return `<tr tabindex="0" data-i="${i}">`+COLS.map(c=>{ let v=r[c.k];
-    if(c.pill){ const g=gOf(r.g); return `<td><span class="spill"><i class="sw" style="background:var(${g.c})"></i>${g.label}</span></td>`; }
-    if(c.net&&r.dup) return `<td class="r muted" title="Repeat of this owner's interest under another lease; counted once">${fmt(v||0,4)}*</td>`;
-    if(v==null||v===''||v===BLANK) return `<td class="${c.r?'r ':''}muted">–</td>`;
+function rowHtml(r,i){ return `<tr tabindex="0" data-i="${i}">`+SC.map(c=>{ let v=r[c.k];
+    if(c.pill){ const g=gOf(r.g); return `<td class="${c.ci}"><span class="spill"><i class="sw" style="background:var(${g.c})"></i>${g.label}</span></td>`; }
+    if(c.net&&r.dup) return `<td class="r muted ${c.ci}" title="Repeat of this owner's interest under another lease; counted once">${fmt(v||0,4)}*</td>`;
+    if(v==null||v===''||v===BLANK) return `<td class="${c.r?'r ':''}muted ${c.ci}">–</td>`;
     v=c.d!=null?fmt(v,c.d):c.f?c.f(v):v;
-    if(c.jump) return `<td class="${c.cls||''}"><button type="button" class="jump" data-jump="${esc(r.id)}" data-tip="Show on plat map">${esc(v)}</button></td>`;
-    const long=typeof v==='string'&&v.length>44&&!c.cls; // long clause text stays to a short preview so rows keep an even height; full text on hover and in the Excel export
-    return `<td class="${c.r?'r ':''}${c.cls||''}"${c.cls==='own'||long?` title="${esc(v)}"`:''}>${esc(long?v.slice(0,v.lastIndexOf(' ',38)>20?v.lastIndexOf(' ',38):38).replace(/[\s,;:-]+$/,'')+'…':v)}</td>`; }).join('')+'</tr>'; }
+    if(c.jump) return `<td class="${c.cls||''} ${c.ci}"><button type="button" class="jump" data-jump="${esc(r.id)}" data-tip="Show on plat map">${esc(v)}</button></td>`;
+    const long=typeof v==='string'&&v.length>44&&!c.cls&&!CORE.has(c.src); // long clause text stays to a short preview so rows keep an even height; full text on hover and in the Excel export
+    return `<td class="${c.r?'r ':''}${c.cls||''} ${c.ci}"${c.cls==='own'||long?` title="${esc(v)}"`:''}>${esc(long?v.slice(0,v.lastIndexOf(' ',38)>20?v.lastIndexOf(' ',38):38).replace(/[\s,;:-]+$/,'')+'…':v)}</td>`; }).join('')+'</tr>'; }
 function moreRows(){ if(LL.shown>=listRows.length) return; const n=Math.min(listRows.length,LL.shown+LL.step);
   $('#llb').insertAdjacentHTML('beforeend',listRows.slice(LL.shown,n).map((r,j)=>rowHtml(r,LL.shown+j)).join('')); LL.shown=n; }
 $('#ll').addEventListener('scroll',e=>{ const el=e.currentTarget; if(el.scrollTop+el.clientHeight>el.scrollHeight-600) moreRows(); },{passive:true});
 function renderList(){
   if($('#pane-ll').hidden){ $('#llct').textContent=fmt(filtered({q:true}).length); LL.dirty=true; return; }
-  LL.dirty=false;
-  $('#llh').innerHTML='<tr>'+COLS.map(c=>`<th class="${c.r?'r':''}${state.sort===c.k?' sorted':''}" data-k="${c.k}" scope="col"${(RLAB[c.src]&&hum(c.src)!==c.l&&hum(c.src).length>c.l.length+6)?` title="${esc(hum(c.src))}"`:''}>${c.l}<span class="ar">${state.sort===c.k?(state.dir>0?'▲':'▼'):'↕'}</span></th>`).join('')+'</tr>';
+  LL.dirty=false; setSC();
+  if(!SC.some(c=>c.k===state.sort)){ state.sort=DEFSORT; state.dir=1; }
+  $$('#ll-cols button').forEach(b=>b.setAttribute('aria-pressed',(b.dataset.c==='all')===ALLC));
+  $('#llColN').textContent=ALLC?'':` · ${fmt(SC.length)} of ${fmt(COLS.length)} columns`;
+  $('#llh').innerHTML='<tr>'+SC.map(c=>`<th class="${c.r?'r':''}${state.sort===c.k?' sorted':''} ${c.ci}" data-k="${c.k}" scope="col"${(RLAB[c.src]&&hum(c.src)!==c.l&&hum(c.src).length>c.l.length+6)?` title="${esc(hum(c.src))}"`:''}>${c.l}<span class="ar">${state.sort===c.k?(state.dir>0?'▲':'▼'):'↕'}</span></th>`).join('')+'</tr>';
   $$('#llh th').forEach(th=>th.onclick=()=>{ const k=th.dataset.k; if(state.sort===k) state.dir*=-1; else { state.sort=k; state.dir=COLS.find(c=>c.k===k).r?-1:1; } renderList(); });
   const rows=filtered({q:true}), k=state.sort, d=state.dir;
   const isU=(COLS.find(c=>c.k===k)||{}).src==='CLIENT_UNIT', tie=(a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true})||(b.cac||0)-(a.cac||0);
@@ -115,7 +125,7 @@ function renderList(){
   $('#llShown').textContent=fmt(rows.length); $('#llTracts').textContent=fmt(tracts(rows)); $('#llAc').textContent=fmt(net(rows),2); $('#llct').textContent=fmt(rows.length);
   const oR=state.unit?[]:rows.filter(r=>r.unitL===OUT); $('#llOut').innerHTML=oR.length?` · incl. ${fmt(tracts(oR))} outside-unit tracts (${fmt(net(oR),2)} ac), not in unit totals`:'';
   $('#ll').scrollTop=0;
-  if(!rows.length){ $('#llb').innerHTML=`<tr><td colspan="${COLS.length}" class="empty">No records match. Clear a filter or the search.</td></tr>`; LL.shown=0; return; }
+  if(!rows.length){ $('#llb').innerHTML=`<tr><td colspan="${SC.length}" class="empty">No records match. Clear a filter or the search.</td></tr>`; LL.shown=0; return; }
   $('#llb').innerHTML=''; LL.shown=0; moreRows();
 }
 $('#llb').addEventListener('click',e=>{ const j=e.target.closest('[data-jump]'); if(j){ openTract(j.dataset.jump); return; } const tr=e.target.closest('tr[data-i]'); if(tr) openDrawer(listRows[+tr.dataset.i]); });
